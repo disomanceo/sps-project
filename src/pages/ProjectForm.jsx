@@ -299,33 +299,6 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
           </section>
         )}
 
-        <div className="form-grid form-extra-grid">
-          <label className="wide">
-            <span>วัตถุประสงค์</span>
-            <textarea value={form.Objectives} onChange={(event) => update('Objectives', event.target.value)} />
-          </label>
-          <label>
-            <span>เป้าหมายเชิงปริมาณ</span>
-            <textarea value={form.QuantityTarget} onChange={(event) => update('QuantityTarget', event.target.value)} />
-          </label>
-          <label>
-            <span>เป้าหมายเชิงคุณภาพ</span>
-            <textarea value={form.QualityTarget} onChange={(event) => update('QualityTarget', event.target.value)} />
-          </label>
-          <label className="wide">
-            <span>กิจกรรมเดิม/หมายเหตุ</span>
-            <textarea value={form.Activities} onChange={(event) => update('Activities', event.target.value)} />
-          </label>
-          <label className="wide">
-            <span>สรุปผลการดำเนินงาน</span>
-            <textarea value={form.ResultSummary} onChange={(event) => update('ResultSummary', event.target.value)} />
-          </label>
-          <label className="wide">
-            <span>ปัญหา/ข้อเสนอแนะ</span>
-            <textarea value={form.Problems} onChange={(event) => update('Problems', event.target.value)} />
-          </label>
-        </div>
-
         <div className="form-actions">
           <button type="button" className="ghost-btn" onClick={() => onNavigate('projects')}>ยกเลิก</button>
           <button type="submit" className="primary-btn" disabled={saving}>

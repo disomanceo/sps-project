@@ -224,10 +224,6 @@ function ProjectInlineDetail({ project, onEdit }) {
         <Detail label="รูปแบบงบ" value={project.useActivities ? 'แยกตามกิจกรรม' : 'โครงการก้อนเดียว'} />
         <Detail label="สถานะ" value={project.status} />
         <Detail label="แหล่งงบประมาณ" value={raw.BudgetSource || '-'} />
-        <Detail label="วัตถุประสงค์" value={raw.Objectives || '-'} wide />
-        <Detail label="กิจกรรมเดิม/หมายเหตุ" value={raw.Activities || '-'} wide />
-        <Detail label="สรุปผล" value={raw.ResultSummary || '-'} wide />
-        <Detail label="ปัญหา/ข้อเสนอแนะ" value={raw.Problems || '-'} wide />
       </div>
     </div>
   );
@@ -293,15 +289,6 @@ function Detail({ label, value, wide }) {
     <div className={wide ? 'detail-item wide' : 'detail-item'}>
       <span>{label}</span>
       <strong>{value || '-'}</strong>
-    </div>
-  );
-}
-
-function BudgetBox({ label, value, tone = 'normal' }) {
-  return (
-    <div className={`budget-box ${tone}`}>
-      <span>{label}</span>
-      <strong>{money(value)} บาท</strong>
     </div>
   );
 }

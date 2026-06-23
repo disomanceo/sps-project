@@ -202,6 +202,7 @@ function getProject(id) {
 function saveProject(project) {
   const sheet = getSheet('Projects');
   ensureHeaders(sheet, PROJECT_HEADERS);
+  const headers = getHeaders(sheet);
 
   const now = new Date().toISOString();
   const id = project.ID || 'P-' + Date.now();
@@ -218,10 +219,10 @@ function saveProject(project) {
 
   const rows = sheetToObjects(sheet);
   const rowIndex = rows.findIndex((item) => item.ID === id);
-  const values = PROJECT_HEADERS.map((header) => cellValue(data[header]));
+  const values = headers.map((header) => cellValue(data[header]));
 
   if (rowIndex >= 0) {
-    sheet.getRange(rowIndex + 2, 1, 1, PROJECT_HEADERS.length).setValues([values]);
+    sheet.getRange(rowIndex + 2, 1, 1, headers.length).setValues([values]);
   } else {
     sheet.appendRow(values);
   }
@@ -265,6 +266,7 @@ function listActivities(projectId) {
 function saveProjectActivities(projectId, activities, now) {
   const sheet = getSheet('Activities');
   ensureHeaders(sheet, ACTIVITY_HEADERS);
+  const headers = getHeaders(sheet);
   const existingRows = sheetToObjects(sheet);
   const incomingIds = activities.map((item) => item.ID).filter(Boolean);
 
@@ -285,11 +287,11 @@ function saveProjectActivities(projectId, activities, now) {
       UpdatedAt: now,
       CreatedAt: activity.CreatedAt || (previous && previous.CreatedAt) || now
     });
-    const values = ACTIVITY_HEADERS.map((header) => cellValue(data[header]));
+    const values = headers.map((header) => cellValue(data[header]));
     const rowIndex = rowsAfterDelete.findIndex((item) => item.ID === id);
 
     if (rowIndex >= 0) {
-      sheet.getRange(rowIndex + 2, 1, 1, ACTIVITY_HEADERS.length).setValues([values]);
+      sheet.getRange(rowIndex + 2, 1, 1, headers.length).setValues([values]);
     } else if (data.ActivityName) {
       sheet.appendRow(values);
     }
@@ -326,6 +328,11 @@ function ensureHeaders(sheet, headers) {
   if (missingHeaders.length > 0) {
     sheet.getRange(1, current.length + 1, 1, missingHeaders.length).setValues([missingHeaders]);
   }
+}
+
+function getHeaders(sheet) {
+  const lastColumn = Math.max(sheet.getLastColumn(), 1);
+  return sheet.getRange(1, 1, 1, lastColumn).getValues()[0].filter(Boolean);
 }
 
 function styleHeader(sheet, columnCount) {

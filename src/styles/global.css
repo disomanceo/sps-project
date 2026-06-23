@@ -1146,10 +1146,6 @@ td strong {
   gap: 12px;
 }
 
-.form-extra-grid {
-  margin-top: 18px;
-}
-
 .modal-actions {
   display: flex;
   justify-content: flex-end;
