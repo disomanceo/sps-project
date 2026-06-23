@@ -332,7 +332,7 @@ function ensureHeaders(sheet, headers) {
 
 function getHeaders(sheet) {
   const lastColumn = Math.max(sheet.getLastColumn(), 1);
-  return sheet.getRange(1, 1, 1, lastColumn).getValues()[0].filter(Boolean);
+  return sheet.getRange(1, 1, 1, lastColumn).getValues()[0];
 }
 
 function styleHeader(sheet, columnCount) {
