@@ -84,7 +84,6 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
                 <th>ผู้รับผิดชอบ</th>
                 <th>งบจัดสรร</th>
                 <th>ใช้จริง</th>
-                <th>กิจกรรม</th>
                 <th>สถานะ</th>
                 <th>จัดการ</th>
               </tr>
@@ -111,7 +110,6 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
                       <td data-label="ผู้รับผิดชอบ" className="nowrap">{project.lead}</td>
                       <td data-label="งบจัดสรร" className="money-cell">{money(project.budget)} บาท</td>
                       <td data-label="ใช้จริง" className="money-cell">{money(project.spent)} บาท</td>
-                      <td data-label="กิจกรรม">{project.useActivities ? `${project.activities.length} กิจกรรม` : 'ก้อนเดียว'}</td>
                       <td data-label="สถานะ"><ProjectStatus value={project.status} /></td>
                       <td data-label="จัดการ">
                         <div className="action-buttons">
@@ -122,7 +120,7 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
                     </tr>
                     {isExpanded && (
                       <tr className="project-expanded-row">
-                        <td colSpan="10">
+                        <td colSpan="9">
                           <ProjectInlineDetail project={project} onEdit={() => onEditProject(project)} />
                         </td>
                       </tr>
@@ -132,7 +130,7 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
               })}
               {!loading && filteredProjects.length === 0 && (
                 <tr>
-                  <td colSpan="10">
+                  <td colSpan="9">
                     <div className="empty-state">{projects.length === 0 ? 'ยังไม่มีข้อมูลโครงการในฐานข้อมูล' : 'ไม่พบข้อมูลตามเงื่อนไขที่เลือก'}</div>
                   </td>
                 </tr>
