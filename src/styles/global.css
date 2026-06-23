@@ -767,6 +767,121 @@ td strong {
   margin: 0;
 }
 
+.budget-tree {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.tree-project-node,
+.tree-child-content {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tree-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tree-title-row strong {
+  min-width: 0;
+  color: #0f172a;
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.tree-toggle-mark,
+.tree-branch {
+  color: #2563eb;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.tree-children {
+  display: grid;
+  gap: 0;
+  padding-left: 20px;
+}
+
+.tree-child-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  position: relative;
+  padding: 8px 0 8px;
+}
+
+.tree-child-row::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 0;
+  bottom: 0;
+  border-left: 2px solid #bfdbfe;
+}
+
+.tree-child-row.is-last::before {
+  bottom: 50%;
+}
+
+.tree-branch {
+  position: relative;
+  z-index: 1;
+  background: #ffffff;
+}
+
+.metric-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.metric-item {
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.metric-item strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.metric-item.primary strong {
+  color: #1d4ed8;
+}
+
+.metric-item.blue strong {
+  color: #0284c7;
+}
+
+.metric-item.success strong {
+  color: #047857;
+}
+
+.metric-item.danger strong {
+  color: #b91c1c;
+}
+
+.tree-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.tree-meta-line strong {
+  color: #3730a3;
+  font-weight: 800;
+}
+
 .nowrap {
   white-space: nowrap;
 }
@@ -1363,6 +1478,24 @@ td strong {
   .inline-detail-head {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .budget-tree {
+    padding: 12px;
+  }
+
+  .tree-children {
+    padding-left: 8px;
+  }
+
+  .tree-child-row {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .metric-line,
+  .tree-meta-line {
+    display: grid;
+    gap: 5px;
   }
 
   .modal-backdrop {

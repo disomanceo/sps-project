@@ -163,6 +163,11 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
 function ProjectInlineDetail({ project, onEdit }) {
   const raw = project.raw || {};
   const remaining = project.budget - project.spent;
+  const projectLineItems = [
+    { label: 'งบจัดสรร', value: project.budget, tone: 'primary' },
+    { label: 'ใช้จริง', value: project.spent, tone: 'blue' },
+    { label: 'คงเหลือ', value: remaining, tone: remaining < 0 ? 'danger' : 'success' }
+  ];
 
   return (
     <div className="inline-detail-panel">
@@ -174,69 +179,94 @@ function ProjectInlineDetail({ project, onEdit }) {
         <button className="ghost-btn" onClick={onEdit}>แก้ไขโครงการ</button>
       </div>
 
-      <div className="detail-grid">
-        <Detail label="ปีงบประมาณ" value={raw.FiscalYear || '2569'} />
-        <Detail label="แผนงาน" value={cleanDepartment(project.owner)} />
-        <Detail label="ผู้รับผิดชอบ" value={project.lead} />
-        <Detail label="สถานะ" value={project.status} />
-        <Detail label="ระยะเวลา" value={formatPeriod(raw.StartDate, raw.EndDate)} />
-        <Detail label="รูปแบบงบ" value={project.useActivities ? 'แยกตามกิจกรรม' : 'โครงการก้อนเดียว'} />
-      </div>
-
-      <div className="budget-summary-grid compact">
-        <BudgetBox label="งบจัดสรร" value={project.budget} />
-        <BudgetBox label="ใช้จริง" value={project.spent} />
-        <BudgetBox label="คงเหลือ" value={remaining} tone={remaining < 0 ? 'danger' : 'normal'} />
-      </div>
-
-      {project.useActivities ? (
-        <section className="activity-detail-section">
-          <div className="section-head">
-            <h4>กิจกรรมภายใต้โครงการ</h4>
-            <span>{project.activities.length} กิจกรรม</span>
+      <section className="budget-tree">
+        <div className="tree-project-node">
+          <div className="tree-title-row">
+            <span className="tree-toggle-mark">▾</span>
+            <strong>{project.name}</strong>
+            <ProjectStatus value={project.status} />
           </div>
-          <div className="activity-table-wrap">
-            <table className="activity-table">
-              <thead>
-                <tr>
-                  <th>กิจกรรม</th>
-                  <th>ผู้รับผิดชอบ</th>
-                  <th>ระยะเวลา</th>
-                  <th>งบกิจกรรม</th>
-                  <th>ใช้จริง</th>
-                  <th>คงเหลือ</th>
-                  <th>สถานะ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {project.activities.map((activity) => (
-                  <tr key={activity.id || activity.name}>
-                    <td data-label="กิจกรรม"><strong>{activity.name}</strong></td>
-                    <td data-label="ผู้รับผิดชอบ">{activity.lead}</td>
-                    <td data-label="ระยะเวลา">{formatPeriod(activity.startDate, activity.endDate)}</td>
-                    <td data-label="งบกิจกรรม" className="money-cell">{money(activity.budget)} บาท</td>
-                    <td data-label="ใช้จริง" className="money-cell">{money(activity.spent)} บาท</td>
-                    <td data-label="คงเหลือ" className="money-cell">{money(activity.budget - activity.spent)} บาท</td>
-                    <td data-label="สถานะ"><ProjectStatus value={activity.status} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <MetricLine items={projectLineItems} />
+          <div className="tree-meta-line">
+            <span>ผู้รับผิดชอบ: <strong>{project.lead || '-'}</strong></span>
+            <span>ระยะเวลา: {formatPeriod(raw.StartDate, raw.EndDate)}</span>
           </div>
-        </section>
-      ) : (
-        <div className="single-budget-note">
-          โครงการนี้ยังไม่แยกกิจกรรม รายการใช้จ่ายจะนับรวมที่ระดับโครงการโดยตรง
         </div>
-      )}
+
+        <div className="tree-children">
+          {project.useActivities && project.activities.length > 0 ? (
+            project.activities.map((activity, index) => (
+              <ActivityTreeNode
+                activity={activity}
+                isLast={index === project.activities.length - 1}
+                key={activity.id || activity.name}
+              />
+            ))
+          ) : (
+            <div className="tree-child-row is-last">
+              <span className="tree-branch">└─</span>
+              <div className="tree-child-content">
+                <strong>ใช้งบระดับโครงการ</strong>
+                <MetricLine items={[{ label: 'ใช้จริง', value: project.spent, tone: 'blue' }]} />
+                <div className="tree-meta-line">
+                  <span>ผู้รับผิดชอบ: <strong>{project.lead || '-'}</strong></span>
+                  <span>ระยะเวลา: {formatPeriod(raw.StartDate, raw.EndDate)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
 
       <div className="detail-grid detail-text-grid">
+        <Detail label="ปีงบประมาณ" value={raw.FiscalYear || '2569'} />
+        <Detail label="แผนงาน" value={cleanDepartment(project.owner)} />
+        <Detail label="รูปแบบงบ" value={project.useActivities ? 'แยกตามกิจกรรม' : 'โครงการก้อนเดียว'} />
+        <Detail label="สถานะ" value={project.status} />
         <Detail label="แหล่งงบประมาณ" value={raw.BudgetSource || '-'} />
         <Detail label="วัตถุประสงค์" value={raw.Objectives || '-'} wide />
         <Detail label="กิจกรรมเดิม/หมายเหตุ" value={raw.Activities || '-'} wide />
         <Detail label="สรุปผล" value={raw.ResultSummary || '-'} wide />
         <Detail label="ปัญหา/ข้อเสนอแนะ" value={raw.Problems || '-'} wide />
       </div>
+    </div>
+  );
+}
+
+function ActivityTreeNode({ activity, isLast }) {
+  const remaining = activity.budget - activity.spent;
+  return (
+    <div className={`tree-child-row ${isLast ? 'is-last' : ''}`}>
+      <span className="tree-branch">{isLast ? '└─' : '├─'}</span>
+      <div className="tree-child-content">
+        <div className="tree-title-row">
+          <strong>{activity.name}</strong>
+          <ProjectStatus value={activity.status} />
+        </div>
+        <MetricLine
+          items={[
+            { label: 'งบกิจกรรม', value: activity.budget, tone: 'primary' },
+            { label: 'ใช้จริง', value: activity.spent, tone: 'blue' },
+            { label: 'คงเหลือ', value: remaining, tone: remaining < 0 ? 'danger' : 'success' }
+          ]}
+        />
+        <div className="tree-meta-line">
+          <span>ผู้รับผิดชอบ: <strong>{activity.lead || '-'}</strong></span>
+          <span>ระยะเวลา: {formatPeriod(activity.startDate, activity.endDate)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MetricLine({ items }) {
+  return (
+    <div className="metric-line">
+      {items.map((item) => (
+        <span className={`metric-item ${item.tone}`} key={item.label}>
+          {item.label} <strong>{money(item.value)} บาท</strong>
+        </span>
+      ))}
     </div>
   );
 }
