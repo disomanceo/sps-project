@@ -691,6 +691,9 @@ td strong {
 }
 
 .project-name-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -701,6 +704,51 @@ td strong {
 
 .project-name-link:hover {
   text-decoration: underline;
+}
+
+.is-expanded-row td {
+  background: #f8fbff;
+}
+
+.project-expanded-row td {
+  padding: 0;
+  background: #f8fbff;
+}
+
+.inline-detail-panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #bfdbfe;
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+  background: #f8fbff;
+}
+
+.inline-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.inline-detail-head h3,
+.inline-detail-head p {
+  margin: 0;
+}
+
+.inline-detail-head h3 {
+  font-size: 18px;
+}
+
+.inline-detail-head p {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.budget-summary-grid.compact {
+  margin: 0;
 }
 
 .nowrap {
@@ -1267,9 +1315,38 @@ td strong {
     min-width: 0;
   }
 
+  .project-name-link {
+    justify-content: flex-end;
+    text-align: right;
+  }
+
   .action-buttons {
     justify-content: flex-end;
     width: 100%;
+  }
+
+  .project-expanded-row {
+    padding: 0;
+  }
+
+  .project-expanded-row td {
+    display: block;
+    padding: 0;
+    text-align: left;
+  }
+
+  .project-expanded-row td::before {
+    display: none;
+  }
+
+  .inline-detail-panel {
+    padding: 14px;
+    border-radius: 8px;
+  }
+
+  .inline-detail-head {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .modal-backdrop {

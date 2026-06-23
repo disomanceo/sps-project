@@ -1,4 +1,4 @@
-import { Edit3, Eye, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Edit3, RefreshCw, Search, Trash2 } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 import { PageHeader } from '../components/PageHeader.jsx';
 import { ProjectStatus } from '../components/ProjectStatus.jsx';
@@ -10,7 +10,7 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
   const [department, setDepartment] = useState('all');
   const [status, setStatus] = useState('all');
   const [year, setYear] = useState('all');
-  const [viewingProject, setViewingProject] = useState(null);
+  const [expandedProjectId, setExpandedProjectId] = useState('');
   const [deletingProject, setDeletingProject] = useState(null);
   const [deleteMessage, setDeleteMessage] = useState('');
 
@@ -28,6 +28,10 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
       return matchQuery && matchDepartment && matchStatus && matchYear;
     });
   }, [department, projects, query, status, year]);
+
+  const toggleProject = (projectId) => {
+    setExpandedProjectId((current) => (current === projectId ? '' : projectId));
+  };
 
   return (
     <>
@@ -86,30 +90,46 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
               </tr>
             </thead>
             <tbody>
-              {filteredProjects.map((project, index) => (
-                <tr key={project.id}>
-                  <td data-label="#">{index + 1}</td>
-                  <td data-label="ปี">{project.raw?.FiscalYear || '2569'}</td>
-                  <td data-label="ชื่อโครงการ" className="project-name-cell">
-                    <button className="project-name-link" onClick={() => setViewingProject(project)}>
-                      {project.name}
-                    </button>
-                  </td>
-                  <td data-label="แผนงาน">{cleanDepartment(project.owner)}</td>
-                  <td data-label="ผู้รับผิดชอบ" className="nowrap">{project.lead}</td>
-                  <td data-label="งบจัดสรร" className="money-cell">{money(project.budget)} บาท</td>
-                  <td data-label="ใช้จริง" className="money-cell">{money(project.spent)} บาท</td>
-                  <td data-label="กิจกรรม">{project.useActivities ? `${project.activities.length} กิจกรรม` : 'ก้อนเดียว'}</td>
-                  <td data-label="สถานะ"><ProjectStatus value={project.status} /></td>
-                  <td data-label="จัดการ">
-                    <div className="action-buttons">
-                      <button className="action-btn view" onClick={() => setViewingProject(project)} title="ดูรายละเอียด"><Eye size={16} /></button>
-                      <button className="action-btn edit" onClick={() => onEditProject(project)} title="แก้ไข"><Edit3 size={16} /></button>
-                      <button className="action-btn delete" onClick={() => { setDeletingProject(project); setDeleteMessage(''); }} title="ลบ"><Trash2 size={16} /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {filteredProjects.map((project, index) => {
+                const isExpanded = expandedProjectId === project.id;
+                return (
+                  <React.Fragment key={project.id}>
+                    <tr className={isExpanded ? 'is-expanded-row' : ''}>
+                      <td data-label="#">{index + 1}</td>
+                      <td data-label="ปี">{project.raw?.FiscalYear || '2569'}</td>
+                      <td data-label="ชื่อโครงการ" className="project-name-cell">
+                        <button
+                          className="project-name-link"
+                          onClick={() => toggleProject(project.id)}
+                          aria-expanded={isExpanded}
+                        >
+                          {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                          <span>{project.name}</span>
+                        </button>
+                      </td>
+                      <td data-label="แผนงาน">{cleanDepartment(project.owner)}</td>
+                      <td data-label="ผู้รับผิดชอบ" className="nowrap">{project.lead}</td>
+                      <td data-label="งบจัดสรร" className="money-cell">{money(project.budget)} บาท</td>
+                      <td data-label="ใช้จริง" className="money-cell">{money(project.spent)} บาท</td>
+                      <td data-label="กิจกรรม">{project.useActivities ? `${project.activities.length} กิจกรรม` : 'ก้อนเดียว'}</td>
+                      <td data-label="สถานะ"><ProjectStatus value={project.status} /></td>
+                      <td data-label="จัดการ">
+                        <div className="action-buttons">
+                          <button className="action-btn edit" onClick={() => onEditProject(project)} title="แก้ไข"><Edit3 size={16} /></button>
+                          <button className="action-btn delete" onClick={() => { setDeletingProject(project); setDeleteMessage(''); }} title="ลบ"><Trash2 size={16} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                    {isExpanded && (
+                      <tr className="project-expanded-row">
+                        <td colSpan="10">
+                          <ProjectInlineDetail project={project} onEdit={() => onEditProject(project)} />
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
               {!loading && filteredProjects.length === 0 && (
                 <tr>
                   <td colSpan="10">
@@ -121,10 +141,6 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
           </table>
         </div>
       </section>
-
-      {viewingProject && (
-        <ProjectDetailModal project={viewingProject} onClose={() => setViewingProject(null)} onEdit={() => onEditProject(viewingProject)} />
-      )}
 
       {deletingProject && (
         <DeleteConfirmModal
@@ -146,87 +162,82 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
   );
 }
 
-function ProjectDetailModal({ project, onClose, onEdit }) {
+function ProjectInlineDetail({ project, onEdit }) {
   const raw = project.raw || {};
   const remaining = project.budget - project.spent;
 
   return (
-    <div className="modal-backdrop">
-      <div className="project-modal project-detail-modal">
-        <div className="modal-head">
-          <div>
-            <h3>{project.name}</h3>
-            <p>{project.id}</p>
+    <div className="inline-detail-panel">
+      <div className="inline-detail-head">
+        <div>
+          <h3>{project.name}</h3>
+          <p>{project.id || 'ยังไม่มีรหัสโครงการ'}</p>
+        </div>
+        <button className="ghost-btn" onClick={onEdit}>แก้ไขโครงการ</button>
+      </div>
+
+      <div className="detail-grid">
+        <Detail label="ปีงบประมาณ" value={raw.FiscalYear || '2569'} />
+        <Detail label="แผนงาน" value={cleanDepartment(project.owner)} />
+        <Detail label="ผู้รับผิดชอบ" value={project.lead} />
+        <Detail label="สถานะ" value={project.status} />
+        <Detail label="ระยะเวลา" value={formatPeriod(raw.StartDate, raw.EndDate)} />
+        <Detail label="รูปแบบงบ" value={project.useActivities ? 'แยกตามกิจกรรม' : 'โครงการก้อนเดียว'} />
+      </div>
+
+      <div className="budget-summary-grid compact">
+        <BudgetBox label="งบจัดสรร" value={project.budget} />
+        <BudgetBox label="ใช้จริง" value={project.spent} />
+        <BudgetBox label="คงเหลือ" value={remaining} tone={remaining < 0 ? 'danger' : 'normal'} />
+      </div>
+
+      {project.useActivities ? (
+        <section className="activity-detail-section">
+          <div className="section-head">
+            <h4>กิจกรรมภายใต้โครงการ</h4>
+            <span>{project.activities.length} กิจกรรม</span>
           </div>
-          <div className="modal-head-actions">
-            <button className="ghost-btn" onClick={onEdit}>แก้ไข</button>
-            <button className="ghost-btn" onClick={onClose}>ปิด</button>
-          </div>
-        </div>
-
-        <div className="detail-grid">
-          <Detail label="ปีงบประมาณ" value={raw.FiscalYear || '2569'} />
-          <Detail label="แผนงาน" value={cleanDepartment(project.owner)} />
-          <Detail label="ผู้รับผิดชอบ" value={project.lead} />
-          <Detail label="สถานะ" value={project.status} />
-          <Detail label="ระยะเวลา" value={formatPeriod(raw.StartDate, raw.EndDate)} />
-          <Detail label="รูปแบบงบ" value={project.useActivities ? 'แยกตามกิจกรรม' : 'โครงการก้อนเดียว'} />
-        </div>
-
-        <div className="budget-summary-grid">
-          <BudgetBox label="งบจัดสรร" value={project.budget} />
-          <BudgetBox label="ใช้จริง" value={project.spent} />
-          <BudgetBox label="คงเหลือ" value={remaining} tone={remaining < 0 ? 'danger' : 'normal'} />
-        </div>
-
-        {project.useActivities ? (
-          <section className="activity-detail-section">
-            <div className="section-head">
-              <h4>กิจกรรมภายใต้โครงการ</h4>
-              <span>{project.activities.length} กิจกรรม</span>
-            </div>
-            <div className="activity-table-wrap">
-              <table className="activity-table">
-                <thead>
-                  <tr>
-                    <th>กิจกรรม</th>
-                    <th>ผู้รับผิดชอบ</th>
-                    <th>ระยะเวลา</th>
-                    <th>งบกิจกรรม</th>
-                    <th>ใช้จริง</th>
-                    <th>คงเหลือ</th>
-                    <th>สถานะ</th>
+          <div className="activity-table-wrap">
+            <table className="activity-table">
+              <thead>
+                <tr>
+                  <th>กิจกรรม</th>
+                  <th>ผู้รับผิดชอบ</th>
+                  <th>ระยะเวลา</th>
+                  <th>งบกิจกรรม</th>
+                  <th>ใช้จริง</th>
+                  <th>คงเหลือ</th>
+                  <th>สถานะ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {project.activities.map((activity) => (
+                  <tr key={activity.id || activity.name}>
+                    <td data-label="กิจกรรม"><strong>{activity.name}</strong></td>
+                    <td data-label="ผู้รับผิดชอบ">{activity.lead}</td>
+                    <td data-label="ระยะเวลา">{formatPeriod(activity.startDate, activity.endDate)}</td>
+                    <td data-label="งบกิจกรรม" className="money-cell">{money(activity.budget)} บาท</td>
+                    <td data-label="ใช้จริง" className="money-cell">{money(activity.spent)} บาท</td>
+                    <td data-label="คงเหลือ" className="money-cell">{money(activity.budget - activity.spent)} บาท</td>
+                    <td data-label="สถานะ"><ProjectStatus value={activity.status} /></td>
                   </tr>
-                </thead>
-                <tbody>
-                  {project.activities.map((activity) => (
-                    <tr key={activity.id || activity.name}>
-                      <td data-label="กิจกรรม"><strong>{activity.name}</strong></td>
-                      <td data-label="ผู้รับผิดชอบ">{activity.lead}</td>
-                      <td data-label="ระยะเวลา">{formatPeriod(activity.startDate, activity.endDate)}</td>
-                      <td data-label="งบกิจกรรม" className="money-cell">{money(activity.budget)} บาท</td>
-                      <td data-label="ใช้จริง" className="money-cell">{money(activity.spent)} บาท</td>
-                      <td data-label="คงเหลือ" className="money-cell">{money(activity.budget - activity.spent)} บาท</td>
-                      <td data-label="สถานะ"><ProjectStatus value={activity.status} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        ) : (
-          <div className="single-budget-note">
-            โครงการนี้ยังไม่แยกกิจกรรม รายการใช้จ่ายจะนับรวมที่ระดับโครงการโดยตรง
+                ))}
+              </tbody>
+            </table>
           </div>
-        )}
-
-        <div className="detail-grid detail-text-grid">
-          <Detail label="แหล่งงบประมาณ" value={raw.BudgetSource || '-'} />
-          <Detail label="วัตถุประสงค์" value={raw.Objectives || '-'} wide />
-          <Detail label="กิจกรรมเดิม/หมายเหตุ" value={raw.Activities || '-'} wide />
-          <Detail label="สรุปผล" value={raw.ResultSummary || '-'} wide />
-          <Detail label="ปัญหา/ข้อเสนอแนะ" value={raw.Problems || '-'} wide />
+        </section>
+      ) : (
+        <div className="single-budget-note">
+          โครงการนี้ยังไม่แยกกิจกรรม รายการใช้จ่ายจะนับรวมที่ระดับโครงการโดยตรง
         </div>
+      )}
+
+      <div className="detail-grid detail-text-grid">
+        <Detail label="แหล่งงบประมาณ" value={raw.BudgetSource || '-'} />
+        <Detail label="วัตถุประสงค์" value={raw.Objectives || '-'} wide />
+        <Detail label="กิจกรรมเดิม/หมายเหตุ" value={raw.Activities || '-'} wide />
+        <Detail label="สรุปผล" value={raw.ResultSummary || '-'} wide />
+        <Detail label="ปัญหา/ข้อเสนอแนะ" value={raw.Problems || '-'} wide />
       </div>
     </div>
   );
