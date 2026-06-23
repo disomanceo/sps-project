@@ -23,6 +23,25 @@ const SHEET_SCHEMAS = {
     'ResultSummary',
     'Problems',
     'CreatedAt',
+    'UpdatedAt',
+    'UseActivities'
+  ],
+  Activities: [
+    'ID',
+    'ProjectID',
+    'ActivityName',
+    'OwnerName',
+    'Status',
+    'ApprovedBudget',
+    'SpentBudget',
+    'StartDate',
+    'EndDate',
+    'Objectives',
+    'QuantityTarget',
+    'QualityTarget',
+    'ResultSummary',
+    'Problems',
+    'CreatedAt',
     'UpdatedAt'
   ],
   Budgets: [
@@ -46,7 +65,8 @@ const SHEET_SCHEMAS = {
     'Status',
     'Note',
     'CreatedAt',
-    'UpdatedAt'
+    'UpdatedAt',
+    'ActivityID'
   ],
   Files: [
     'ID',
@@ -86,6 +106,7 @@ const SHEET_SCHEMAS = {
 };
 
 const PROJECT_HEADERS = SHEET_SCHEMAS.Projects;
+const ACTIVITY_HEADERS = SHEET_SCHEMAS.Activities;
 
 function doGet() {
   return jsonOutput({
@@ -107,6 +128,7 @@ function doPost(e) {
     if (action === 'getProject') return jsonOutput(getProject(payload.id));
     if (action === 'saveProject') return jsonOutput(saveProject(payload.project));
     if (action === 'deleteProject') return jsonOutput(deleteProject(payload.id));
+    if (action === 'listActivities') return jsonOutput(listActivities(payload.projectId));
 
     return jsonOutput({
       ok: false,
@@ -155,9 +177,17 @@ function getDashboard() {
 function listProjects() {
   const sheet = getSheet('Projects');
   ensureHeaders(sheet, PROJECT_HEADERS);
+  const activities = listActivities().activities;
   return {
     ok: true,
-    projects: sheetToObjects(sheet)
+    projects: sheetToObjects(sheet).map((project) => {
+      const projectActivities = activities.filter((activity) => activity.ProjectID === project.ID);
+      const activitySpent = projectActivities.reduce((sum, item) => sum + Number(item.SpentBudget || 0), 0);
+      return Object.assign({}, project, {
+        ActivitiesList: projectActivities,
+        SpentBudget: projectActivities.length > 0 ? activitySpent : project.SpentBudget
+      });
+    })
   };
 }
 
@@ -175,15 +205,20 @@ function saveProject(project) {
 
   const now = new Date().toISOString();
   const id = project.ID || 'P-' + Date.now();
+  const projectActivities = Array.isArray(project.activities) ? project.activities : [];
+  const useActivities = project.UseActivities === true || project.UseActivities === 'true' || projectActivities.length > 0;
+  const activitySpent = projectActivities.reduce((sum, item) => sum + Number(item.SpentBudget || 0), 0);
   const data = Object.assign({}, project, {
     ID: id,
+    UseActivities: useActivities ? 'TRUE' : '',
+    SpentBudget: useActivities ? activitySpent : project.SpentBudget,
     UpdatedAt: now,
     CreatedAt: project.CreatedAt || now
   });
 
   const rows = sheetToObjects(sheet);
   const rowIndex = rows.findIndex((item) => item.ID === id);
-  const values = PROJECT_HEADERS.map((header) => data[header] || '');
+  const values = PROJECT_HEADERS.map((header) => cellValue(data[header]));
 
   if (rowIndex >= 0) {
     sheet.getRange(rowIndex + 2, 1, 1, PROJECT_HEADERS.length).setValues([values]);
@@ -191,9 +226,13 @@ function saveProject(project) {
     sheet.appendRow(values);
   }
 
+  saveProjectActivities(id, projectActivities, now);
+
   return {
     ok: true,
-    project: data
+    project: Object.assign({}, data, {
+      ActivitiesList: listActivities(id).activities
+    })
   };
 }
 
@@ -206,9 +245,67 @@ function deleteProject(id) {
     sheet.deleteRow(rowIndex + 2);
   }
 
+  deleteActivitiesByProject(id);
+
   return {
     ok: true
   };
+}
+
+function listActivities(projectId) {
+  const sheet = getSheet('Activities');
+  ensureHeaders(sheet, ACTIVITY_HEADERS);
+  const activities = sheetToObjects(sheet);
+  return {
+    ok: true,
+    activities: projectId ? activities.filter((item) => item.ProjectID === projectId) : activities
+  };
+}
+
+function saveProjectActivities(projectId, activities, now) {
+  const sheet = getSheet('Activities');
+  ensureHeaders(sheet, ACTIVITY_HEADERS);
+  const existingRows = sheetToObjects(sheet);
+  const incomingIds = activities.map((item) => item.ID).filter(Boolean);
+
+  for (let index = existingRows.length - 1; index >= 0; index -= 1) {
+    const row = existingRows[index];
+    if (row.ProjectID === projectId && row.ID && incomingIds.indexOf(row.ID) === -1) {
+      sheet.deleteRow(index + 2);
+    }
+  }
+
+  const rowsAfterDelete = sheetToObjects(sheet);
+  activities.forEach((activity, index) => {
+    const id = activity.ID || 'A-' + Date.now() + '-' + (index + 1);
+    const previous = rowsAfterDelete.find((item) => item.ID === id);
+    const data = Object.assign({}, activity, {
+      ID: id,
+      ProjectID: projectId,
+      UpdatedAt: now,
+      CreatedAt: activity.CreatedAt || (previous && previous.CreatedAt) || now
+    });
+    const values = ACTIVITY_HEADERS.map((header) => cellValue(data[header]));
+    const rowIndex = rowsAfterDelete.findIndex((item) => item.ID === id);
+
+    if (rowIndex >= 0) {
+      sheet.getRange(rowIndex + 2, 1, 1, ACTIVITY_HEADERS.length).setValues([values]);
+    } else if (data.ActivityName) {
+      sheet.appendRow(values);
+    }
+  });
+}
+
+function deleteActivitiesByProject(projectId) {
+  const sheet = getSheet('Activities');
+  ensureHeaders(sheet, ACTIVITY_HEADERS);
+  const rows = sheetToObjects(sheet);
+
+  for (let index = rows.length - 1; index >= 0; index -= 1) {
+    if (rows[index].ProjectID === projectId) {
+      sheet.deleteRow(index + 2);
+    }
+  }
 }
 
 function getSheet(name) {
@@ -217,10 +314,17 @@ function getSheet(name) {
 }
 
 function ensureHeaders(sheet, headers) {
-  const current = sheet.getRange(1, 1, 1, headers.length).getValues()[0];
+  const currentLastColumn = Math.max(sheet.getLastColumn(), 1);
+  const current = sheet.getRange(1, 1, 1, currentLastColumn).getValues()[0];
   const hasHeaders = current.some(Boolean);
   if (!hasHeaders) {
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    return;
+  }
+
+  const missingHeaders = headers.filter((header) => current.indexOf(header) === -1);
+  if (missingHeaders.length > 0) {
+    sheet.getRange(1, current.length + 1, 1, missingHeaders.length).setValues([missingHeaders]);
   }
 }
 
@@ -285,6 +389,11 @@ function sheetToObjects(sheet) {
       return obj;
     }, {});
   });
+}
+
+function cellValue(value) {
+  if (value === null || value === undefined) return '';
+  return value;
 }
 
 function jsonOutput(data) {

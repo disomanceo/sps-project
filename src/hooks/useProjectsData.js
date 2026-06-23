@@ -9,28 +9,28 @@ export function useProjectsData() {
   const [error, setError] = useState('');
 
   const loadProjects = useCallback(async () => {
-      setLoading(true);
-      setError('');
+    setLoading(true);
+    setError('');
 
-      try {
-        const result = await gasApi.listProjects();
+    try {
+      const result = await gasApi.listProjects();
 
-        if (result.ok && Array.isArray(result.projects)) {
-          setProjects(result.projects.map(mapSheetProject));
-          setSource(result.projects.length > 0 ? 'sheet' : 'empty');
-          return;
-        }
-
-        setProjects([]);
-        setSource('error');
-        setError(result.message || 'ไม่สามารถโหลดข้อมูลจากฐานข้อมูลได้');
-      } catch (err) {
-        setProjects([]);
-        setSource('error');
-        setError(err.message || 'ไม่สามารถโหลดข้อมูลจากฐานข้อมูลได้');
-      } finally {
-        setLoading(false);
+      if (result.ok && Array.isArray(result.projects)) {
+        setProjects(result.projects.map(mapSheetProject));
+        setSource(result.projects.length > 0 ? 'sheet' : 'empty');
+        return;
       }
+
+      setProjects([]);
+      setSource('error');
+      setError(result.message || 'ไม่สามารถโหลดข้อมูลจากฐานข้อมูลได้');
+    } catch (err) {
+      setProjects([]);
+      setSource('error');
+      setError(err.message || 'ไม่สามารถโหลดข้อมูลจากฐานข้อมูลได้');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -53,12 +53,12 @@ export function useProjectsData() {
     try {
       const result = await gasApi.saveProject(project);
       if (!result.ok) {
-        throw new Error(result.message || 'Unable to save project.');
+        throw new Error(result.message || 'ไม่สามารถบันทึกโครงการได้');
       }
       await loadProjects();
       return result.project;
     } catch (err) {
-      setError(err.message || 'Unable to save project.');
+      setError(err.message || 'ไม่สามารถบันทึกโครงการได้');
       throw err;
     } finally {
       setLoading(false);
@@ -91,7 +91,7 @@ export function useProjectsData() {
       totalBudget,
       usedBudget,
       remainingBudget: totalBudget - usedBudget,
-      pending: projects.filter((item) => item.status === 'รออนุมัติ').length
+      pending: projects.filter((item) => item.status === 'ยังไม่เริ่ม').length
     };
   }, [projects]);
 

@@ -30,6 +30,7 @@ async function request(action, payload = {}) {
 export const gasApi = {
   getDashboard: () => request('getDashboard'),
   listProjects: () => request('listProjects'),
+  listActivities: (projectId) => request('listActivities', { projectId }),
   getProject: (id) => request('getProject', { id }),
   saveProject: (project) => request('saveProject', { project }),
   deleteProject: (id) => request('deleteProject', { id }),
