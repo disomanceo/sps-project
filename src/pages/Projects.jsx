@@ -84,6 +84,7 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
                 <th>ผู้รับผิดชอบ</th>
                 <th>งบจัดสรร</th>
                 <th>ใช้จริง</th>
+                <th>คงเหลือ</th>
                 <th>สถานะ</th>
                 <th>จัดการ</th>
               </tr>
@@ -91,6 +92,7 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
             <tbody>
               {filteredProjects.map((project, index) => {
                 const isExpanded = expandedProjectId === project.id;
+                const remaining = project.budget - project.spent;
                 return (
                   <React.Fragment key={project.id}>
                     <tr className={isExpanded ? 'is-expanded-row' : ''}>
@@ -110,6 +112,7 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
                       <td data-label="ผู้รับผิดชอบ" className="nowrap">{project.lead}</td>
                       <td data-label="งบจัดสรร" className="money-cell">{money(project.budget)} บาท</td>
                       <td data-label="ใช้จริง" className="money-cell">{money(project.spent)} บาท</td>
+                      <td data-label="คงเหลือ" className={`money-cell ${remaining < 0 ? 'danger-text' : ''}`}>{money(remaining)} บาท</td>
                       <td data-label="สถานะ"><ProjectStatus value={project.status} /></td>
                       <td data-label="จัดการ">
                         <div className="action-buttons">
@@ -120,7 +123,7 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
                     </tr>
                     {isExpanded && (
                       <tr className="project-expanded-row">
-                        <td colSpan="9">
+                        <td colSpan="10">
                           <ProjectInlineDetail project={project} onEdit={() => onEditProject(project)} />
                         </td>
                       </tr>
@@ -130,7 +133,7 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
               })}
               {!loading && filteredProjects.length === 0 && (
                 <tr>
-                  <td colSpan="9">
+                  <td colSpan="10">
                     <div className="empty-state">{projects.length === 0 ? 'ยังไม่มีข้อมูลโครงการในฐานข้อมูล' : 'ไม่พบข้อมูลตามเงื่อนไขที่เลือก'}</div>
                   </td>
                 </tr>
@@ -189,6 +192,7 @@ function ProjectInlineDetail({ project, onEdit }) {
           <MetricLine items={projectLineItems} />
           <div className="tree-meta-line">
             <span>ผู้รับผิดชอบ: <strong>{project.lead || '-'}</strong></span>
+            <span>แหล่งงบประมาณ: <strong>{raw.BudgetSource || '-'}</strong></span>
             <span>ระยะเวลา: {formatPeriod(raw.StartDate, raw.EndDate)}</span>
           </div>
         </div>
@@ -210,6 +214,7 @@ function ProjectInlineDetail({ project, onEdit }) {
                 <MetricLine items={[{ label: 'ใช้จริง', value: project.spent, tone: 'blue' }]} />
                 <div className="tree-meta-line">
                   <span>ผู้รับผิดชอบ: <strong>{project.lead || '-'}</strong></span>
+                  <span>แหล่งงบประมาณ: <strong>{raw.BudgetSource || '-'}</strong></span>
                   <span>ระยะเวลา: {formatPeriod(raw.StartDate, raw.EndDate)}</span>
                 </div>
               </div>
@@ -248,6 +253,7 @@ function ActivityTreeNode({ activity, isLast }) {
         />
         <div className="tree-meta-line">
           <span>ผู้รับผิดชอบ: <strong>{activity.lead || '-'}</strong></span>
+          <span>แหล่งงบประมาณ: <strong>{activity.budgetSource || '-'}</strong></span>
           <span>ระยะเวลา: {formatPeriod(activity.startDate, activity.endDate)}</span>
         </div>
       </div>

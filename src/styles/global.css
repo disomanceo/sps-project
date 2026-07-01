@@ -892,6 +892,14 @@ td strong {
   white-space: nowrap;
 }
 
+.danger-text {
+  color: #dc2626 !important;
+}
+
+.success-text {
+  color: #059669 !important;
+}
+
 .action-buttons {
   display: flex;
   align-items: center;
@@ -1093,6 +1101,55 @@ td strong {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid var(--line);
+}
+
+.budget-source-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.source-choice-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.source-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.source-choice input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+}
+
+.source-add-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.source-add-row input {
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #ffffff;
+  outline: 0;
 }
 
 .activity-table-wrap {

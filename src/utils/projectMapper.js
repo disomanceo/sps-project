@@ -28,6 +28,7 @@ export function mapSheetActivity(row) {
     name: row.ActivityName || 'ยังไม่ระบุชื่อกิจกรรม',
     lead: row.OwnerName || '-',
     status: normalizeStatus(row.Status),
+    budgetSource: row.BudgetSource || '',
     budget: Number(row.ApprovedBudget || 0),
     spent: Number(row.SpentBudget || 0),
     startDate: row.StartDate || '',

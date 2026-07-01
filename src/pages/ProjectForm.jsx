@@ -4,6 +4,8 @@ import { PageHeader } from '../components/PageHeader.jsx';
 import { PROJECT_STATUSES, normalizeStatus } from '../utils/projectMapper.js';
 import { money } from '../utils/format.js';
 
+const DEFAULT_BUDGET_SOURCES = ['เงินอุดหนุน', 'เงินรายได้สถานศึกษา', 'อื่นๆ'];
+
 const emptyForm = {
   ID: '',
   ProjectName: '',
@@ -11,7 +13,7 @@ const emptyForm = {
   Department: '',
   OwnerName: '',
   Status: 'ยังไม่เริ่ม',
-  BudgetSource: 'แผนปฏิบัติการ ปีงบประมาณ 2569',
+  BudgetSource: DEFAULT_BUDGET_SOURCES[0],
   ApprovedBudget: '',
   SpentBudget: '0',
   StartDate: '',
@@ -30,6 +32,7 @@ const emptyActivity = {
   ActivityName: '',
   OwnerName: '',
   Status: 'ยังไม่เริ่ม',
+  BudgetSource: '',
   ApprovedBudget: '',
   SpentBudget: '0',
   StartDate: '',
@@ -44,6 +47,7 @@ const emptyActivity = {
 export function ProjectForm({ editingProject, projects, saveProject, onFormDone, onNavigate }) {
   const [form, setForm] = useState(emptyForm);
   const [activities, setActivities] = useState([]);
+  const [sourceDraft, setSourceDraft] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
@@ -52,6 +56,20 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
     return Array.from(new Set(projects.map((item) => item.owner).filter(Boolean)));
   }, [projects]);
 
+  const budgetSources = useMemo(() => {
+    const values = [...DEFAULT_BUDGET_SOURCES];
+    projects.forEach((project) => {
+      splitSources(project.raw?.BudgetSource).forEach((item) => values.push(item));
+      (project.activities || []).forEach((activity) => {
+        splitSources(activity.raw?.BudgetSource || activity.budgetSource).forEach((item) => values.push(item));
+      });
+    });
+    splitSources(form.BudgetSource).forEach((item) => values.push(item));
+    activities.forEach((activity) => splitSources(activity.BudgetSource).forEach((item) => values.push(item)));
+    return Array.from(new Set(values.filter(Boolean)));
+  }, [activities, form.BudgetSource, projects]);
+
+  const selectedSources = useMemo(() => splitSources(form.BudgetSource), [form.BudgetSource]);
   const activityBudgetTotal = useMemo(() => {
     return activities.reduce((sum, item) => sum + Number(item.ApprovedBudget || 0), 0);
   }, [activities]);
@@ -64,6 +82,7 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
     if (!editingProject) {
       setForm(emptyForm);
       setActivities([]);
+      setSourceDraft('');
       setMessage('');
       return;
     }
@@ -77,6 +96,7 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
       Department: raw.Department || editingProject.owner,
       OwnerName: raw.OwnerName || editingProject.lead,
       Status: normalizeStatus(raw.Status || editingProject.status),
+      BudgetSource: raw.BudgetSource || emptyForm.BudgetSource,
       ApprovedBudget: raw.ApprovedBudget ?? editingProject.budget,
       SpentBudget: raw.SpentBudget ?? editingProject.spent,
       StartDate: toDateInput(raw.StartDate),
@@ -90,11 +110,13 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
       ActivityName: activity.name,
       OwnerName: activity.raw?.OwnerName || activity.lead,
       Status: activity.status,
+      BudgetSource: activity.raw?.BudgetSource || activity.budgetSource || '',
       ApprovedBudget: activity.raw?.ApprovedBudget ?? activity.budget,
       SpentBudget: activity.raw?.SpentBudget ?? activity.spent,
       StartDate: toDateInput(activity.raw?.StartDate || activity.startDate),
       EndDate: toDateInput(activity.raw?.EndDate || activity.endDate)
     })));
+    setSourceDraft('');
     setMessage('');
   }, [editingProject]);
 
@@ -108,8 +130,32 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
     )));
   };
 
+  const toggleBudgetSource = (source) => {
+    const next = selectedSources.includes(source)
+      ? selectedSources.filter((item) => item !== source)
+      : [...selectedSources, source];
+    update('BudgetSource', next.join(', '));
+  };
+
+  const addBudgetSource = () => {
+    const nextSource = sourceDraft.trim();
+    if (!nextSource) return;
+    const next = selectedSources.includes(nextSource) ? selectedSources : [...selectedSources, nextSource];
+    update('BudgetSource', next.join(', '));
+    setSourceDraft('');
+  };
+
   const addActivity = () => {
-    setActivities((current) => [...current, { ...emptyActivity, OwnerName: form.OwnerName, StartDate: form.StartDate, EndDate: form.EndDate }]);
+    setActivities((current) => [
+      ...current,
+      {
+        ...emptyActivity,
+        OwnerName: form.OwnerName,
+        BudgetSource: selectedSources[0] || '',
+        StartDate: form.StartDate,
+        EndDate: form.EndDate
+      }
+    ]);
   };
 
   const removeActivity = (index) => {
@@ -140,15 +186,10 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
       return;
     }
 
-    if (useActivities && activityBudgetTotal > approvedBudget) {
-      showError('งบรวมของกิจกรรมต้องไม่เกินงบจัดสรรของโครงการ');
-      setSaving(false);
-      return;
-    }
-
     try {
       await saveProject({
         ...form,
+        BudgetSource: selectedSources.join(', '),
         UseActivities: useActivities,
         ApprovedBudget: approvedBudget,
         SpentBudget: String(useActivities ? activitySpentTotal : Number(form.SpentBudget || 0)),
@@ -172,6 +213,7 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
 
   const isEdit = Boolean(form.ID);
   const remainingActivityBudget = Number(form.ApprovedBudget || 0) - activityBudgetTotal;
+  const activitySourceOptions = selectedSources.length > 0 ? selectedSources : budgetSources;
 
   return (
     <>
@@ -216,10 +258,6 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
             </select>
           </label>
           <label>
-            <span>แหล่งงบประมาณ</span>
-            <input value={form.BudgetSource} onChange={(event) => update('BudgetSource', event.target.value)} />
-          </label>
-          <label>
             <span>งบจัดสรร</span>
             <input type="number" min="0" step="0.01" value={form.ApprovedBudget} onChange={(event) => update('ApprovedBudget', event.target.value)} />
           </label>
@@ -241,12 +279,48 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
           </label>
         </div>
 
+        <section className="budget-source-section">
+          <div className="section-head">
+            <div>
+              <h3>แหล่งงบประมาณของโครงการ</h3>
+              <p>เลือกได้มากกว่า 1 แหล่ง และกิจกรรมย่อยสามารถเลือกใช้แหล่งที่ต่างกันได้</p>
+            </div>
+          </div>
+          <div className="source-choice-list">
+            {budgetSources.map((source) => (
+              <label className="source-choice" key={source}>
+                <input
+                  type="checkbox"
+                  checked={selectedSources.includes(source)}
+                  onChange={() => toggleBudgetSource(source)}
+                />
+                <span>{source}</span>
+              </label>
+            ))}
+          </div>
+          <div className="source-add-row">
+            <input
+              value={sourceDraft}
+              placeholder="เพิ่มแหล่งงบประมาณ เช่น เงินบริจาค"
+              onChange={(event) => setSourceDraft(event.target.value)}
+            />
+            <button type="button" className="ghost-btn" onClick={addBudgetSource}>
+              <Plus size={16} /> เพิ่ม
+            </button>
+          </div>
+        </section>
+
         {form.UseActivities && (
           <section className="activity-form-section">
             <div className="section-head">
               <div>
                 <h3>กิจกรรมภายใต้โครงการ</h3>
-                <p>งบกิจกรรมรวม {money(activityBudgetTotal)} บาท คงเหลือจัดสรร {money(remainingActivityBudget)} บาท</p>
+                <p>
+                  งบกิจกรรมรวม {money(activityBudgetTotal)} บาท คงเหลือจัดสรร{' '}
+                  <strong className={remainingActivityBudget < 0 ? 'danger-text' : 'success-text'}>
+                    {money(remainingActivityBudget)} บาท
+                  </strong>
+                </p>
               </div>
               <button type="button" className="primary-btn" onClick={addActivity}><Plus size={16} /> เพิ่มกิจกรรม</button>
             </div>
@@ -266,6 +340,13 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
                     <label>
                       <span>ผู้รับผิดชอบกิจกรรม</span>
                       <input value={activity.OwnerName} onChange={(event) => updateActivity(index, 'OwnerName', event.target.value)} />
+                    </label>
+                    <label>
+                      <span>แหล่งงบประมาณ</span>
+                      <select value={activity.BudgetSource} onChange={(event) => updateActivity(index, 'BudgetSource', event.target.value)}>
+                        <option value="">เลือกแหล่งงบ</option>
+                        {activitySourceOptions.map((source) => <option value={source} key={source}>{source}</option>)}
+                      </select>
                     </label>
                     <label>
                       <span>สถานะ</span>
@@ -308,6 +389,13 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
       </form>
     </>
   );
+}
+
+function splitSources(value) {
+  return String(value || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function toDateInput(value) {

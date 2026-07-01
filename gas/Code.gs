@@ -32,6 +32,7 @@ const SHEET_SCHEMAS = {
     'ActivityName',
     'OwnerName',
     'Status',
+    'BudgetSource',
     'ApprovedBudget',
     'SpentBudget',
     'StartDate',
