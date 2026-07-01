@@ -184,10 +184,13 @@ function ProjectInlineDetail({ project, onEdit }) {
 
       <section className="budget-tree">
         <div className="tree-project-node">
-          <div className="tree-title-row">
-            <span className="tree-toggle-mark">▾</span>
+          <div className="project-parent-label">โครงการหลัก</div>
+          <div className="tree-title-row parent-title">
             <strong>{project.name}</strong>
-            <ProjectStatus value={project.status} />
+            <div className="parent-tags">
+              <ProjectStatus value={project.status} />
+              <span>{project.activities.length} กิจกรรม</span>
+            </div>
           </div>
           <MetricLine items={projectLineItems} />
           <div className="tree-meta-line">
@@ -198,19 +201,26 @@ function ProjectInlineDetail({ project, onEdit }) {
         </div>
 
         <div className="tree-children">
+          <div className="activity-group-head">
+            <span>กิจกรรมภายใต้โครงการนี้</span>
+            <strong>{project.useActivities && project.activities.length > 0 ? `${project.activities.length} รายการ` : 'ใช้งบระดับโครงการ'}</strong>
+          </div>
           {project.useActivities && project.activities.length > 0 ? (
             project.activities.map((activity, index) => (
               <ActivityTreeNode
                 activity={activity}
                 isLast={index === project.activities.length - 1}
+                index={index}
                 key={activity.id || activity.name}
               />
             ))
           ) : (
             <div className="tree-child-row is-last">
-              <span className="tree-branch">└─</span>
+              <span className="activity-index">1</span>
               <div className="tree-child-content">
-                <strong>ใช้งบระดับโครงการ</strong>
+                <div className="tree-title-row">
+                  <strong>ใช้งบระดับโครงการ</strong>
+                </div>
                 <MetricLine items={[{ label: 'ใช้จริง', value: project.spent, tone: 'blue' }]} />
                 <div className="tree-meta-line">
                   <span>ผู้รับผิดชอบ: <strong>{project.lead || '-'}</strong></span>
@@ -234,11 +244,12 @@ function ProjectInlineDetail({ project, onEdit }) {
   );
 }
 
-function ActivityTreeNode({ activity, isLast }) {
+function ActivityTreeNode({ activity, isLast, index }) {
   const remaining = activity.budget - activity.spent;
+  const progress = activity.budget > 0 ? Math.min((activity.spent / activity.budget) * 100, 100) : 0;
   return (
     <div className={`tree-child-row ${isLast ? 'is-last' : ''}`}>
-      <span className="tree-branch">{isLast ? '└─' : '├─'}</span>
+      <span className="activity-index">{index + 1}</span>
       <div className="tree-child-content">
         <div className="tree-title-row">
           <strong>{activity.name}</strong>
@@ -251,6 +262,9 @@ function ActivityTreeNode({ activity, isLast }) {
             { label: 'คงเหลือ', value: remaining, tone: remaining < 0 ? 'danger' : 'success' }
           ]}
         />
+        <div className="activity-progress" aria-label={`ใช้ไป ${Math.round(progress)} เปอร์เซ็นต์`}>
+          <span style={{ width: `${progress}%` }} />
+        </div>
         <div className="tree-meta-line">
           <span>ผู้รับผิดชอบ: <strong>{activity.lead || '-'}</strong></span>
           <span>แหล่งงบประมาณ: <strong>{activity.budgetSource || '-'}</strong></span>

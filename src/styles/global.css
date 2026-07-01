@@ -769,25 +769,40 @@ td strong {
 
 .budget-tree {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   padding: 14px;
   border: 1px solid #dbeafe;
   border-radius: 8px;
-  background: #ffffff;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
 
-.tree-project-node,
+.tree-project-node {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #bfdbfe;
+  border-left: 5px solid #2563eb;
+  border-radius: 8px;
+  background: #eff6ff;
+}
+
 .tree-child-content {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
 }
 
 .tree-title-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   min-width: 0;
+}
+
+.tree-title-row.parent-title {
+  align-items: flex-start;
 }
 
 .tree-title-row strong {
@@ -797,60 +812,143 @@ td strong {
   overflow-wrap: anywhere;
 }
 
-.tree-toggle-mark,
-.tree-branch {
-  color: #2563eb;
+.project-parent-label {
+  width: fit-content;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 12px;
   font-weight: 800;
-  line-height: 1;
+}
+
+.parent-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.parent-tags > span:not(.status-pill) {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .tree-children {
+  position: relative;
   display: grid;
-  gap: 0;
-  padding-left: 20px;
+  gap: 10px;
+  padding-left: 16px;
+}
+
+.tree-children::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 18px;
+  bottom: 18px;
+  width: 3px;
+  border-radius: 999px;
+  background: #bfdbfe;
+}
+
+.activity-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-left: 22px;
+  padding: 6px 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.activity-group-head span {
+  color: #1e293b;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.activity-group-head strong {
+  color: #2563eb;
+  font-size: 13px;
 }
 
 .tree-child-row {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-columns: 44px minmax(0, 1fr);
   position: relative;
-  padding: 8px 0 8px;
+  gap: 8px;
+  margin-left: 0;
 }
 
-.tree-child-row::before {
-  content: '';
-  position: absolute;
-  left: 9px;
-  top: 0;
-  bottom: 0;
-  border-left: 2px solid #bfdbfe;
-}
-
-.tree-child-row.is-last::before {
-  bottom: 50%;
-}
-
-.tree-branch {
+.activity-index {
   position: relative;
   z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-top: 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-weight: 900;
+}
+
+.tree-child-content {
+  padding: 12px;
+  border: 1px solid #dbeafe;
+  border-left: 4px solid #60a5fa;
+  border-radius: 8px;
   background: #ffffff;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.06);
+}
+
+.tree-child-row:nth-child(even) .tree-child-content {
+  border-left-color: #38bdf8;
 }
 
 .metric-line {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .metric-item {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
   color: #475569;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .metric-item strong {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
+}
+
+.activity-progress {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.activity-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #2563eb, #38bdf8);
 }
 
 .metric-item.primary strong {
@@ -1538,14 +1636,27 @@ td strong {
   }
 
   .tree-children {
-    padding-left: 8px;
+    padding-left: 0;
+  }
+
+  .tree-children::before {
+    left: 18px;
+  }
+
+  .activity-group-head {
+    align-items: flex-start;
+    flex-direction: column;
+    margin-left: 44px;
   }
 
   .tree-child-row {
-    grid-template-columns: 28px minmax(0, 1fr);
+    grid-template-columns: 38px minmax(0, 1fr);
   }
 
-  .metric-line,
+  .metric-line {
+    grid-template-columns: 1fr;
+  }
+
   .tree-meta-line {
     display: grid;
     gap: 5px;
