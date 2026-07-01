@@ -331,7 +331,7 @@ button {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
+  grid-template-columns: minmax(0, 1.55fr) minmax(260px, 0.45fr);
   gap: 18px;
 }
 
@@ -515,8 +515,8 @@ button {
 .progress-table-head,
 .progress-project-row {
   display: grid;
-  grid-template-columns: 44px minmax(220px, 1.2fr) minmax(120px, auto) minmax(180px, 0.9fr) minmax(100px, auto);
-  gap: 12px;
+  grid-template-columns: 34px minmax(360px, 1.8fr) 112px minmax(150px, 0.72fr) minmax(86px, auto);
+  gap: 10px;
   align-items: center;
 }
 
@@ -530,7 +530,7 @@ button {
 }
 
 .progress-project-row {
-  padding: 14px 20px;
+  padding: 13px 16px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -557,10 +557,10 @@ button {
 .progress-project-name strong {
   display: block;
   color: #0f172a;
-  font-size: 14px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .progress-project-name span,
@@ -571,11 +571,14 @@ button {
 
 .budget-mini {
   display: grid;
-  gap: 7px;
+  gap: 6px;
+  min-width: 0;
 }
 
 .budget-mini strong {
   color: #0f172a;
+  font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 .follow-list {
@@ -584,10 +587,10 @@ button {
 
 .follow-item {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 34px;
-  gap: 12px;
+  grid-template-columns: 30px minmax(0, 1fr) 28px;
+  gap: 9px;
   align-items: center;
-  padding: 14px 20px;
+  padding: 11px 12px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -598,11 +601,16 @@ button {
 .follow-icon {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
   background: #eff6ff;
   color: #2563eb;
+}
+
+.follow-icon svg {
+  width: 16px;
+  height: 16px;
 }
 
 .follow-item strong,
@@ -612,22 +620,24 @@ button {
 
 .follow-item strong {
   color: #0f172a;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .follow-item span {
   color: #64748b;
-  font-size: 12px;
+  font-size: 11px;
+  line-height: 1.35;
 }
 
 .follow-item b {
   display: grid;
   place-items: center;
   width: 32px;
-  height: 32px;
+  height: 28px;
   border-radius: 999px;
   background: #dbeafe;
   color: #1d4ed8;
+  font-size: 12px;
 }
 
 .follow-item.red .follow-icon,
@@ -1649,6 +1659,11 @@ td strong {
 
   .dashboard-grid {
     grid-template-columns: 1fr;
+  }
+
+  .progress-table-head,
+  .progress-project-row {
+    grid-template-columns: 34px minmax(260px, 1fr) 108px minmax(140px, 0.7fr) minmax(82px, auto);
   }
 
   .project-filterbar {
