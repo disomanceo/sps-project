@@ -166,11 +166,7 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
 function ProjectInlineDetail({ project, onEdit }) {
   const raw = project.raw || {};
   const remaining = project.budget - project.spent;
-  const projectLineItems = [
-    { label: 'งบจัดสรร', value: project.budget, tone: 'primary' },
-    { label: 'ใช้จริง', value: project.spent, tone: 'blue' },
-    { label: 'คงเหลือ', value: remaining, tone: remaining < 0 ? 'danger' : 'success' }
-  ];
+  const hasActivities = project.useActivities && project.activities.length > 0;
 
   return (
     <div className="inline-detail-panel">
@@ -182,56 +178,34 @@ function ProjectInlineDetail({ project, onEdit }) {
         <button className="ghost-btn" onClick={onEdit}>แก้ไขโครงการ</button>
       </div>
 
-      <section className="budget-tree">
-        <div className="tree-project-node">
-          <div className="project-parent-label">โครงการหลัก</div>
-          <div className="tree-title-row parent-title">
-            <strong>{project.name}</strong>
-            <div className="parent-tags">
-              <ProjectStatus value={project.status} />
-              <span>{project.activities.length} กิจกรรม</span>
-            </div>
-          </div>
-          <MetricLine items={projectLineItems} />
-          <div className="tree-meta-line">
-            <span>ผู้รับผิดชอบ: <strong>{project.lead || '-'}</strong></span>
-            <span>แหล่งงบประมาณ: <strong>{raw.BudgetSource || '-'}</strong></span>
-            <span>ระยะเวลา: {formatPeriod(raw.StartDate, raw.EndDate)}</span>
-          </div>
-        </div>
-
-        <div className="tree-children">
+      {hasActivities ? (
+        <section className="budget-tree activities-only">
+          <div className="tree-children">
           <div className="activity-group-head">
             <span>กิจกรรมภายใต้โครงการนี้</span>
-            <strong>{project.useActivities && project.activities.length > 0 ? `${project.activities.length} รายการ` : 'ใช้งบระดับโครงการ'}</strong>
+            <strong>{project.activities.length} รายการ</strong>
           </div>
-          {project.useActivities && project.activities.length > 0 ? (
-            project.activities.map((activity, index) => (
+            {project.activities.map((activity, index) => (
               <ActivityTreeNode
                 activity={activity}
                 isLast={index === project.activities.length - 1}
                 index={index}
                 key={activity.id || activity.name}
               />
-            ))
-          ) : (
-            <div className="tree-child-row is-last">
-              <span className="activity-index">1</span>
-              <div className="tree-child-content">
-                <div className="tree-title-row">
-                  <strong>ใช้งบระดับโครงการ</strong>
-                </div>
-                <MetricLine items={[{ label: 'ใช้จริง', value: project.spent, tone: 'blue' }]} />
-                <div className="tree-meta-line">
-                  <span>ผู้รับผิดชอบ: <strong>{project.lead || '-'}</strong></span>
-                  <span>แหล่งงบประมาณ: <strong>{raw.BudgetSource || '-'}</strong></span>
-                  <span>ระยะเวลา: {formatPeriod(raw.StartDate, raw.EndDate)}</span>
-                </div>
-              </div>
-            </div>
-          )}
+            ))}
+          </div>
+        </section>
+      ) : (
+        <div className="single-project-budget">
+          <MetricLine
+            items={[
+              { label: 'งบจัดสรร', value: project.budget, tone: 'primary' },
+              { label: 'ใช้จริง', value: project.spent, tone: 'blue' },
+              { label: 'คงเหลือ', value: remaining, tone: remaining < 0 ? 'danger' : 'success' }
+            ]}
+          />
         </div>
-      </section>
+      )}
 
       <div className="detail-grid detail-text-grid">
         <Detail label="ปีงบประมาณ" value={raw.FiscalYear || '2569'} />

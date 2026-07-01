@@ -315,15 +315,28 @@ button {
   overflow-wrap: anywhere;
 }
 
+.stat-card small {
+  display: block;
+  margin-top: 8px;
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 12px;
+  font-weight: 600;
+}
+
 .stat-card.violet { background: linear-gradient(135deg, #4f46e5, #7c3aed); }
 .stat-card.blue { background: linear-gradient(135deg, #2563eb, #0891b2); }
 .stat-card.rose { background: linear-gradient(135deg, #e11d48, #f97316); }
 .stat-card.dark { background: #1f2937; }
+.stat-card.green { background: linear-gradient(135deg, #059669, #22c55e); }
 
 .dashboard-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
   gap: 18px;
+}
+
+.dashboard-grid.refined {
+  align-items: start;
 }
 
 .panel {
@@ -345,6 +358,98 @@ button {
 .panel-title h3 {
   margin: 0;
   font-size: 17px;
+}
+
+.panel-title.compact {
+  padding-bottom: 8px;
+  border-bottom: 0;
+}
+
+.journey-panel {
+  margin-bottom: 18px;
+}
+
+.journey-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  padding: 0 20px 20px;
+}
+
+.journey-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.journey-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: -16px;
+  top: 50%;
+  width: 18px;
+  height: 2px;
+  background: #bfdbfe;
+}
+
+.journey-icon {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  width: 52px;
+  height: 70px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-weight: 900;
+}
+
+.journey-step h4 {
+  margin: 0 0 5px;
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.journey-step ul {
+  margin: 0 0 10px;
+  padding-left: 16px;
+  color: #475569;
+  font-size: 12px;
+}
+
+.journey-step strong {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 12px;
+}
+
+.journey-step.cyan .journey-icon,
+.journey-step.cyan strong {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.journey-step.amber .journey-icon,
+.journey-step.amber strong {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.journey-step.green .journey-icon,
+.journey-step.green strong {
+  background: #dcfce7;
+  color: #166534;
 }
 
 .small-note,
@@ -401,6 +506,152 @@ button {
   height: 100%;
   border-radius: inherit;
   background: var(--green);
+}
+
+.progress-table {
+  display: grid;
+}
+
+.progress-table-head,
+.progress-project-row {
+  display: grid;
+  grid-template-columns: 44px minmax(220px, 1.2fr) minmax(120px, auto) minmax(180px, 0.9fr) minmax(100px, auto);
+  gap: 12px;
+  align-items: center;
+}
+
+.progress-table-head {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.progress-project-row {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.progress-project-row:last-child {
+  border-bottom: 0;
+}
+
+.row-index {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.progress-project-name {
+  min-width: 0;
+}
+
+.progress-project-name strong {
+  display: block;
+  color: #0f172a;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.progress-project-name span,
+.budget-mini {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.budget-mini {
+  display: grid;
+  gap: 7px;
+}
+
+.budget-mini strong {
+  color: #0f172a;
+}
+
+.follow-list {
+  display: grid;
+}
+
+.follow-item {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 34px;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.follow-item:last-child {
+  border-bottom: 0;
+}
+
+.follow-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.follow-item strong,
+.follow-item span {
+  display: block;
+}
+
+.follow-item strong {
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.follow-item span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.follow-item b {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.follow-item.red .follow-icon,
+.follow-item.red b {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.follow-item.orange .follow-icon,
+.follow-item.orange b {
+  background: #ffedd5;
+  color: #ea580c;
+}
+
+.follow-item.violet .follow-icon,
+.follow-item.violet b {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.follow-item.green .follow-icon,
+.follow-item.green b {
+  background: #dcfce7;
+  color: #166534;
 }
 
 .activity-list article,
@@ -774,6 +1025,17 @@ td strong {
   border: 1px solid #dbeafe;
   border-radius: 8px;
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.budget-tree.activities-only {
+  padding: 12px;
+}
+
+.single-project-budget {
+  padding: 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: #ffffff;
 }
 
 .tree-project-node {
@@ -1376,8 +1638,13 @@ td strong {
 
 @media (max-width: 1100px) {
   .stat-grid,
-  .report-grid {
+  .report-grid,
+  .journey-steps {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .journey-step::after {
+    display: none;
   }
 
   .dashboard-grid {
@@ -1465,8 +1732,41 @@ td strong {
     grid-template-columns: 1fr;
   }
 
+  .journey-steps {
+    grid-template-columns: 1fr;
+    padding: 0 14px 14px;
+  }
+
+  .journey-step {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+
+  .journey-icon {
+    width: 44px;
+    height: 62px;
+  }
+
   .stat-card {
     min-height: 104px;
+  }
+
+  .progress-table-head {
+    display: none;
+  }
+
+  .progress-project-row {
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: flex-start;
+  }
+
+  .progress-project-row .status-pill,
+  .progress-project-row .budget-mini,
+  .progress-project-row > strong {
+    grid-column: 2;
+  }
+
+  .follow-item {
+    padding: 12px 14px;
   }
 
   .toolbar {
