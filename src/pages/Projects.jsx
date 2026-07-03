@@ -1,9 +1,10 @@
-import { ChevronDown, ChevronRight, Edit3, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { BookOpen, ChevronDown, ChevronRight, Edit3, ExternalLink, FileText, GraduationCap, RefreshCw, Search, Trash2, Users } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 import { PageHeader } from '../components/PageHeader.jsx';
 import { ProjectStatus } from '../components/ProjectStatus.jsx';
 import { money } from '../utils/format.js';
 import { PROJECT_STATUSES } from '../utils/projectMapper.js';
+import '../styles/projects-compact.css';
 
 export function Projects({ projects, loading, source, error, onNavigate, onEditProject, refreshProjects, deleteProject }) {
   const [query, setQuery] = useState('');
@@ -78,7 +79,6 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
             <thead>
               <tr>
                 <th>#</th>
-                <th>ปี</th>
                 <th>ชื่อโครงการ</th>
                 <th>แผนงาน</th>
                 <th>ผู้รับผิดชอบ</th>
@@ -86,6 +86,7 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
                 <th>ใช้จริง</th>
                 <th>คงเหลือ</th>
                 <th>สถานะ</th>
+                <th>ไฟล์</th>
                 <th>จัดการ</th>
               </tr>
             </thead>
@@ -95,9 +96,8 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
                 const remaining = project.budget - project.spent;
                 return (
                   <React.Fragment key={project.id}>
-                    <tr className={isExpanded ? 'is-expanded-row' : ''}>
+                    <tr className={isExpanded ? 'is-expanded-row is-selected-project' : ''}>
                       <td data-label="#">{index + 1}</td>
-                      <td data-label="ปี">{project.raw?.FiscalYear || '2569'}</td>
                       <td data-label="ชื่อโครงการ" className="project-name-cell">
                         <button
                           className="project-name-link"
@@ -105,6 +105,7 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
                           aria-expanded={isExpanded}
                         >
                           {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                          <ProjectTypeIcon index={index} />
                           <span>{project.name}</span>
                         </button>
                       </td>
@@ -114,6 +115,9 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
                       <td data-label="ใช้จริง" className="money-cell">{money(project.spent)} บาท</td>
                       <td data-label="คงเหลือ" className={`money-cell ${remaining < 0 ? 'danger-text' : ''}`}>{money(remaining)} บาท</td>
                       <td data-label="สถานะ"><ProjectStatus value={project.status} /></td>
+                      <td data-label="ไฟล์">
+                        <ProjectFileLink project={project} />
+                      </td>
                       <td data-label="จัดการ">
                         <div className="action-buttons">
                           <button className="action-btn edit" onClick={() => onEditProject(project)} title="แก้ไข"><Edit3 size={16} /></button>
@@ -167,32 +171,38 @@ function ProjectInlineDetail({ project, onEdit }) {
   const raw = project.raw || {};
   const remaining = project.budget - project.spent;
   const hasActivities = project.useActivities && project.activities.length > 0;
+  const firstActivityKey = hasActivities ? getActivityKey(project.activities[0], 0) : '';
+  const [selectedActivityKey, setSelectedActivityKey] = useState(firstActivityKey);
 
   return (
-    <div className="inline-detail-panel">
-      <div className="inline-detail-head">
-        <div>
-          <h3>{project.name}</h3>
-          <p>{project.id || 'ยังไม่มีรหัสโครงการ'}</p>
-        </div>
-        <button className="ghost-btn" onClick={onEdit}>แก้ไขโครงการ</button>
+    <div className="inline-detail-panel compact-project-detail">
+      <div className="inline-detail-tools">
+        <button className="ghost-btn compact-edit-btn" onClick={onEdit}>แก้ไขโครงการ</button>
       </div>
 
       {hasActivities ? (
-        <section className="budget-tree activities-only">
+        <section className="budget-tree activities-only compact-activity-tree" data-activity-count={project.activities.length}>
           <div className="tree-children">
-          <div className="activity-group-head">
-            <span>กิจกรรมภายใต้โครงการนี้</span>
-            <strong>{project.activities.length} รายการ</strong>
-          </div>
-            {project.activities.map((activity, index) => (
-              <ActivityTreeNode
-                activity={activity}
-                isLast={index === project.activities.length - 1}
-                index={index}
-                key={activity.id || activity.name}
-              />
-            ))}
+            <div className="nested-activity-head">
+              <div>
+                <span className="nested-count">{project.activities.length}</span>
+                <strong>กิจกรรมย่อยภายใต้โครงการ</strong>
+                <span className="nested-badge">{project.activities.length} รายการ</span>
+              </div>
+            </div>
+            {project.activities.map((activity, index) => {
+              const activityKey = getActivityKey(activity, index);
+              return (
+                <ActivityTreeNode
+                  activity={activity}
+                  isLast={index === project.activities.length - 1}
+                  index={index}
+                  isSelected={selectedActivityKey === activityKey}
+                  onSelect={() => setSelectedActivityKey(activityKey)}
+                  key={activityKey}
+                />
+              );
+            })}
           </div>
         </section>
       ) : (
@@ -207,7 +217,7 @@ function ProjectInlineDetail({ project, onEdit }) {
         </div>
       )}
 
-      <div className="detail-grid detail-text-grid">
+      <div className="detail-grid detail-text-grid compact-detail-grid">
         <Detail label="ปีงบประมาณ" value={raw.FiscalYear || '2569'} />
         <Detail label="แผนงาน" value={cleanDepartment(project.owner)} />
         <Detail label="รูปแบบงบ" value={project.useActivities ? 'แยกตามกิจกรรม' : 'โครงการก้อนเดียว'} />
@@ -218,13 +228,28 @@ function ProjectInlineDetail({ project, onEdit }) {
   );
 }
 
-function ActivityTreeNode({ activity, isLast, index }) {
+function ActivityTreeNode({ activity, isLast, index, isSelected, onSelect }) {
   const remaining = activity.budget - activity.spent;
   const progress = activity.budget > 0 ? Math.min((activity.spent / activity.budget) * 100, 100) : 0;
+
   return (
-    <div className={`tree-child-row ${isLast ? 'is-last' : ''}`}>
-      <span className="activity-index">{index + 1}</span>
-      <div className="tree-child-content">
+    <div className={`tree-child-row ${isLast ? 'is-last' : ''} ${isSelected ? 'is-selected-activity' : ''}`}>
+      <button
+        type="button"
+        className="activity-index"
+        onClick={onSelect}
+        aria-label={`เลือกกิจกรรมที่ ${index + 1}: ${activity.name}`}
+        aria-pressed={isSelected}
+      >
+        {index + 1}
+      </button>
+
+      <button
+        type="button"
+        className="tree-child-content activity-select-card"
+        onClick={onSelect}
+        aria-pressed={isSelected}
+      >
         <div className="tree-title-row">
           <strong>{activity.name}</strong>
           <ProjectStatus value={activity.status} />
@@ -244,7 +269,7 @@ function ActivityTreeNode({ activity, isLast, index }) {
           <span>แหล่งงบประมาณ: <strong>{activity.budgetSource || '-'}</strong></span>
           <span>ระยะเวลา: {formatPeriod(activity.startDate, activity.endDate)}</span>
         </div>
-      </div>
+      </button>
     </div>
   );
 }
@@ -259,6 +284,73 @@ function MetricLine({ items }) {
       ))}
     </div>
   );
+}
+
+
+function ProjectTypeIcon({ index }) {
+  const icons = [GraduationCap, BookOpen, Users];
+  const Icon = icons[index % icons.length];
+
+  return (
+    <span className={`project-type-icon tone-${index % icons.length}`} aria-hidden="true">
+      <Icon size={16} />
+    </span>
+  );
+}
+
+function ProjectFileLink({ project }) {
+  const fileUrl = getProjectFileUrl(project);
+
+  if (!fileUrl) {
+    return <span className="project-file-empty" title="ยังไม่มีไฟล์แนบ">-</span>;
+  }
+
+  return (
+    <a
+      className="project-file-link"
+      href={fileUrl}
+      target="_blank"
+      rel="noreferrer"
+      title="เปิดไฟล์แนบ"
+      onClick={(event) => event.stopPropagation()}
+    >
+      <FileText size={15} />
+      <span>เปิดไฟล์</span>
+      <ExternalLink size={12} />
+    </a>
+  );
+}
+
+function getProjectFileUrl(project) {
+  const raw = project?.raw || {};
+  const candidates = [
+    project?.fileUrl,
+    project?.fileURL,
+    project?.attachmentUrl,
+    project?.attachmentURL,
+    project?.driveUrl,
+    project?.driveURL,
+    raw.FileURL,
+    raw.FileUrl,
+    raw.fileUrl,
+    raw.AttachmentURL,
+    raw.AttachmentUrl,
+    raw.attachmentUrl,
+    raw.DriveURL,
+    raw.DriveUrl,
+    raw.driveUrl,
+    raw.ProjectFileURL,
+    raw.ProjectFileUrl,
+    raw.DocumentURL,
+    raw.DocumentUrl,
+    raw['ไฟล์'],
+    raw['ไฟล์แนบ'],
+    raw['ลิงก์ไฟล์'],
+    raw['เอกสารแนบ']
+  ];
+
+  const value = candidates.find((item) => typeof item === 'string' && item.trim());
+  return value ? value.trim() : '';
 }
 
 function DeleteConfirmModal({ project, message, onCancel, onConfirm }) {
@@ -300,6 +392,10 @@ function unique(values) {
 
 function cleanDepartment(value) {
   return String(value || '-').replace(/^\d+\.\s*/, '');
+}
+
+function getActivityKey(activity, index) {
+  return String(activity.id || activity.name || `activity-${index}`);
 }
 
 function formatPeriod(startDate, endDate) {
