@@ -1,0 +1,13 @@
+เพิ่ม 2 case นี้ใน switch(action) ของ doPost เดิม:
+
+case 'uploadProjectFile':
+  return jsonOutput_(uploadProjectFile(request.payload));
+
+case 'deleteProjectFile':
+  return jsonOutput_(deleteProjectFile(request.payload));
+
+หมายเหตุ:
+- เปลี่ยน jsonOutput_ ให้เป็นชื่อฟังก์ชันส่ง JSON ที่โปรเจกต์เดิมใช้อยู่
+- ถ้า router เดิมใช้ return result โดยตรง ให้เขียน:
+  result = uploadProjectFile(payload);
+  break;

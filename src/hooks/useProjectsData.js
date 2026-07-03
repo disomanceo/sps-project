@@ -11,16 +11,13 @@ export function useProjectsData() {
   const loadProjects = useCallback(async () => {
     setLoading(true);
     setError('');
-
     try {
       const result = await gasApi.listProjects();
-
       if (result.ok && Array.isArray(result.projects)) {
         setProjects(result.projects.map(mapSheetProject));
         setSource(result.projects.length > 0 ? 'sheet' : 'empty');
         return;
       }
-
       setProjects([]);
       setSource('error');
       setError(result.message || 'ไม่สามารถโหลดข้อมูลจากฐานข้อมูลได้');
@@ -34,17 +31,7 @@ export function useProjectsData() {
   }, []);
 
   useEffect(() => {
-    let alive = true;
-
-    async function load() {
-      if (!alive) return;
-      await loadProjects();
-    }
-
-    load();
-    return () => {
-      alive = false;
-    };
+    loadProjects();
   }, [loadProjects]);
 
   const saveProject = useCallback(async (project) => {
@@ -52,9 +39,7 @@ export function useProjectsData() {
     setError('');
     try {
       const result = await gasApi.saveProject(project);
-      if (!result.ok) {
-        throw new Error(result.message || 'ไม่สามารถบันทึกโครงการได้');
-      }
+      if (!result.ok) throw new Error(result.message || 'ไม่สามารถบันทึกโครงการได้');
       await loadProjects();
       return result.project;
     } catch (err) {
@@ -65,14 +50,26 @@ export function useProjectsData() {
     }
   }, [loadProjects]);
 
+  const uploadProjectFile = useCallback(async (payload) => {
+    const result = await gasApi.uploadProjectFile(payload);
+    if (!result.ok || !result.file) {
+      throw new Error(result.message || 'อัปโหลดไฟล์ไม่สำเร็จ');
+    }
+    return result.file;
+  }, []);
+
+  const deleteProjectFile = useCallback(async (payload) => {
+    const result = await gasApi.deleteProjectFile(payload);
+    if (!result.ok) throw new Error(result.message || 'ลบไฟล์ไม่สำเร็จ');
+    return true;
+  }, []);
+
   const deleteProject = useCallback(async (id) => {
     setLoading(true);
     setError('');
     try {
       const result = await gasApi.deleteProject(id);
-      if (!result.ok) {
-        throw new Error(result.message || 'ไม่สามารถลบโครงการได้');
-      }
+      if (!result.ok) throw new Error(result.message || 'ไม่สามารถลบโครงการได้');
       await loadProjects();
       return true;
     } catch (err) {
@@ -103,6 +100,8 @@ export function useProjectsData() {
     source,
     refreshProjects: loadProjects,
     saveProject,
+    uploadProjectFile,
+    deleteProjectFile,
     deleteProject
   };
 }

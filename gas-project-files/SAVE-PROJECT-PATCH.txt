@@ -1,0 +1,10 @@
+การบันทึก AttachmentsJSON
+
+ตรวจฟังก์ชัน saveProject เดิม:
+1. ต้องรับค่า project.AttachmentsJSON
+2. ต้องมีหัวตาราง AttachmentsJSON ในชีต Projects
+3. ตอนเขียนแถว ให้เขียนค่า AttachmentsJSON ลงคอลัมน์นี้
+4. ตอน listProjects ต้องคืนคอลัมน์ AttachmentsJSON กลับหน้าเว็บ
+
+ถ้า saveProject เดิมเป็นแบบค้นหาหัวคอลัมน์และเขียนตามชื่อ field อยู่แล้ว
+เพียงรัน setupProjectAttachmentsColumn() ครั้งเดียวก็เพียงพอ

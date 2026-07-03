@@ -1,4 +1,4 @@
-import { BookOpen, ChevronDown, ChevronRight, Edit3, ExternalLink, FileText, GraduationCap, RefreshCw, Search, Trash2, Users } from 'lucide-react';
+import { BookOpenCheck, BriefcaseBusiness, ChevronDown, ChevronRight, Edit3, ExternalLink, FileImage, FileText, FileType2, Landmark, RefreshCw, Search, Settings2, Trash2, UsersRound } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 import { PageHeader } from '../components/PageHeader.jsx';
 import { ProjectStatus } from '../components/ProjectStatus.jsx';
@@ -105,7 +105,7 @@ export function Projects({ projects, loading, source, error, onNavigate, onEditP
                           aria-expanded={isExpanded}
                         >
                           {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                          <ProjectTypeIcon index={index} />
+                          <ProjectTypeIcon department={project.owner} />
                           <span>{project.name}</span>
                         </button>
                       </td>
@@ -287,70 +287,137 @@ function MetricLine({ items }) {
 }
 
 
-function ProjectTypeIcon({ index }) {
-  const icons = [GraduationCap, BookOpen, Users];
-  const Icon = icons[index % icons.length];
+function ProjectTypeIcon({ department }) {
+  const config = getDepartmentIconConfig(department);
+  const Icon = config.icon;
 
   return (
-    <span className={`project-type-icon tone-${index % icons.length}`} aria-hidden="true">
-      <Icon size={16} />
+    <span
+      className={`project-type-icon ${config.className}`}
+      title={config.label}
+      aria-label={config.label}
+    >
+      <Icon size={17} />
     </span>
   );
 }
 
-function ProjectFileLink({ project }) {
-  const fileUrl = getProjectFileUrl(project);
+function getDepartmentIconConfig(value) {
+  const department = cleanDepartment(value).toLowerCase();
 
-  if (!fileUrl) {
+  if (department.includes('วิชาการ')) {
+    return {
+      icon: BookOpenCheck,
+      className: 'department-academic',
+      label: 'ฝ่ายวิชาการ'
+    };
+  }
+
+  if (department.includes('งบประมาณ') || department.includes('การเงิน')) {
+    return {
+      icon: Landmark,
+      className: 'department-budget',
+      label: 'ฝ่ายงบประมาณ'
+    };
+  }
+
+  if (
+    department.includes('บริหารทั่วไป') ||
+    department.includes('ทั่วไป') ||
+    department.includes('อาคาร') ||
+    department.includes('สถานที่')
+  ) {
+    return {
+      icon: Settings2,
+      className: 'department-general',
+      label: 'ฝ่ายบริหารทั่วไป'
+    };
+  }
+
+  if (
+    department.includes('บุคคล') ||
+    department.includes('บุคลากร') ||
+    department.includes('งานบุคคล')
+  ) {
+    return {
+      icon: UsersRound,
+      className: 'department-personnel',
+      label: 'ฝ่ายบุคคล'
+    };
+  }
+
+  return {
+    icon: BriefcaseBusiness,
+    className: 'department-other',
+    label: department && department !== '-' ? `แผนงาน ${cleanDepartment(value)}` : 'โครงการ'
+  };
+}
+
+function ProjectFileLink({ project }) {
+  const attachments = getProjectAttachments(project);
+
+  if (!attachments.length) {
     return <span className="project-file-empty" title="ยังไม่มีไฟล์แนบ">-</span>;
   }
 
+  const visible = attachments.slice(0, 3);
+  const remaining = attachments.length - visible.length;
+
+  return (
+    <div className="project-file-stack" aria-label={`${attachments.length} ไฟล์แนบ`}>
+      {visible.map((attachment, index) => (
+        <AttachmentLink attachment={attachment} index={index} key={attachment.id || attachment.url || `${attachment.name}-${index}`} />
+      ))}
+      {remaining > 0 && <span className="project-file-more">+{remaining}</span>}
+    </div>
+  );
+}
+
+function AttachmentLink({ attachment, index }) {
+  const mimeType = attachment.mimeType || inferAttachmentMime(attachment.name);
+  const isImage = mimeType.startsWith('image/');
+  const isPdf = mimeType === 'application/pdf';
+  const Icon = isImage ? FileImage : isPdf ? FileText : FileType2;
+  const className = isImage ? 'image' : isPdf ? 'pdf' : 'word';
+
   return (
     <a
-      className="project-file-link"
-      href={fileUrl}
+      className={`project-file-icon ${className}`}
+      href={attachment.url}
       target="_blank"
       rel="noreferrer"
-      title="เปิดไฟล์แนบ"
+      title={attachment.name || `ไฟล์ที่ ${index + 1}`}
       onClick={(event) => event.stopPropagation()}
     >
-      <FileText size={15} />
-      <span>เปิดไฟล์</span>
-      <ExternalLink size={12} />
+      {isImage && attachment.thumbnailUrl ? (
+        <img src={attachment.thumbnailUrl} alt="" />
+      ) : (
+        <Icon size={16} />
+      )}
     </a>
   );
 }
 
-function getProjectFileUrl(project) {
+function getProjectAttachments(project) {
+  if (Array.isArray(project?.attachments)) return project.attachments;
   const raw = project?.raw || {};
-  const candidates = [
-    project?.fileUrl,
-    project?.fileURL,
-    project?.attachmentUrl,
-    project?.attachmentURL,
-    project?.driveUrl,
-    project?.driveURL,
-    raw.FileURL,
-    raw.FileUrl,
-    raw.fileUrl,
-    raw.AttachmentURL,
-    raw.AttachmentUrl,
-    raw.attachmentUrl,
-    raw.DriveURL,
-    raw.DriveUrl,
-    raw.driveUrl,
-    raw.ProjectFileURL,
-    raw.ProjectFileUrl,
-    raw.DocumentURL,
-    raw.DocumentUrl,
-    raw['ไฟล์'],
-    raw['ไฟล์แนบ'],
-    raw['ลิงก์ไฟล์'],
-    raw['เอกสารแนบ']
-  ];
+  const value = raw.AttachmentsJSON || raw.Attachments;
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
-  const value = candidates.find((item) => typeof item === 'string' && item.trim());
-  return value ? value.trim() : '';
+function inferAttachmentMime(name = '') {
+  if (/\.pdf$/i.test(name)) return 'application/pdf';
+  if (/\.docx?$/i.test(name)) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  if (/\.png$/i.test(name)) return 'image/png';
+  if (/\.webp$/i.test(name)) return 'image/webp';
+  return 'image/jpeg';
 }
 
 function DeleteConfirmModal({ project, message, onCancel, onConfirm }) {

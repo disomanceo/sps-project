@@ -26,12 +26,8 @@ function App() {
   const data = useProjectsData();
 
   const handleNavigate = (page) => {
-    if (page !== 'form') {
-      setEditingProject(null);
-    }
-    if (page === 'form') {
-      setEditingProject(null);
-    }
+    if (page !== 'form') setEditingProject(null);
+    if (page === 'form') setEditingProject(null);
     setActivePage(page);
   };
 

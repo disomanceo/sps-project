@@ -1,10 +1,27 @@
-import { Plus, Trash2 } from 'lucide-react';
-import React, { useEffect, useMemo, useState } from 'react';
+import {
+  FileImage,
+  FileText,
+  FileType2,
+  Plus,
+  Trash2,
+  Upload,
+  X
+} from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { PageHeader } from '../components/PageHeader.jsx';
 import { PROJECT_STATUSES, normalizeStatus } from '../utils/projectMapper.js';
 import { money } from '../utils/format.js';
 
 const DEFAULT_BUDGET_SOURCES = ['เงินอุดหนุน', 'เงินรายได้สถานศึกษา', 'อื่นๆ'];
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const ACCEPTED_FILE_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+];
 
 const emptyForm = {
   ID: '',
@@ -24,7 +41,8 @@ const emptyForm = {
   Activities: '',
   UseActivities: false,
   ResultSummary: '',
-  Problems: ''
+  Problems: '',
+  AttachmentsJSON: '[]'
 };
 
 const emptyActivity = {
@@ -44,13 +62,25 @@ const emptyActivity = {
   Problems: ''
 };
 
-export function ProjectForm({ editingProject, projects, saveProject, onFormDone, onNavigate }) {
+export function ProjectForm({
+  editingProject,
+  projects,
+  saveProject,
+  uploadProjectFile,
+  deleteProjectFile,
+  onFormDone,
+  onNavigate
+}) {
   const [form, setForm] = useState(emptyForm);
   const [activities, setActivities] = useState([]);
   const [sourceDraft, setSourceDraft] = useState('');
+  const [attachments, setAttachments] = useState([]);
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const [removedAttachments, setRemovedAttachments] = useState([]);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState('success');
+  const fileInputRef = useRef(null);
 
   const departments = useMemo(() => {
     return Array.from(new Set(projects.map((item) => item.owner).filter(Boolean)));
@@ -70,24 +100,32 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
   }, [activities, form.BudgetSource, projects]);
 
   const selectedSources = useMemo(() => splitSources(form.BudgetSource), [form.BudgetSource]);
-  const activityBudgetTotal = useMemo(() => {
-    return activities.reduce((sum, item) => sum + Number(item.ApprovedBudget || 0), 0);
-  }, [activities]);
-
-  const activitySpentTotal = useMemo(() => {
-    return activities.reduce((sum, item) => sum + Number(item.SpentBudget || 0), 0);
-  }, [activities]);
+  const activityBudgetTotal = useMemo(
+    () => activities.reduce((sum, item) => sum + Number(item.ApprovedBudget || 0), 0),
+    [activities]
+  );
+  const activitySpentTotal = useMemo(
+    () => activities.reduce((sum, item) => sum + Number(item.SpentBudget || 0), 0),
+    [activities]
+  );
 
   useEffect(() => {
     if (!editingProject) {
       setForm(emptyForm);
       setActivities([]);
+      setAttachments([]);
+      setPendingFiles([]);
+      setRemovedAttachments([]);
       setSourceDraft('');
       setMessage('');
       return;
     }
 
     const raw = editingProject.raw || {};
+    const existingAttachments = parseAttachments(
+      raw.AttachmentsJSON || raw.Attachments || editingProject.attachments
+    );
+
     setForm({
       ...emptyForm,
       ...raw,
@@ -101,8 +139,10 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
       SpentBudget: raw.SpentBudget ?? editingProject.spent,
       StartDate: toDateInput(raw.StartDate),
       EndDate: toDateInput(raw.EndDate),
-      UseActivities: raw.UseActivities === 'TRUE' || editingProject.useActivities
+      UseActivities: raw.UseActivities === 'TRUE' || editingProject.useActivities,
+      AttachmentsJSON: JSON.stringify(existingAttachments)
     });
+
     setActivities((editingProject.activities || []).map((activity) => ({
       ...emptyActivity,
       ...(activity.raw || {}),
@@ -116,13 +156,15 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
       StartDate: toDateInput(activity.raw?.StartDate || activity.startDate),
       EndDate: toDateInput(activity.raw?.EndDate || activity.endDate)
     })));
+
+    setAttachments(existingAttachments);
+    setPendingFiles([]);
+    setRemovedAttachments([]);
     setSourceDraft('');
     setMessage('');
   }, [editingProject]);
 
-  const update = (field, value) => {
-    setForm((current) => ({ ...current, [field]: value }));
-  };
+  const update = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
   const updateActivity = (index, field, value) => {
     setActivities((current) => current.map((item, itemIndex) => (
@@ -162,6 +204,45 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
     setActivities((current) => current.filter((_, itemIndex) => itemIndex !== index));
   };
 
+  const handleFilesSelected = (event) => {
+    const selected = Array.from(event.target.files || []);
+    event.target.value = '';
+
+    const accepted = [];
+    const errors = [];
+
+    selected.forEach((file) => {
+      if (!isAcceptedFile(file)) {
+        errors.push(`${file.name}: รองรับเฉพาะรูปภาพ, PDF และ Word`);
+        return;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        errors.push(`${file.name}: ไฟล์ต้องไม่เกิน 10 MB`);
+        return;
+      }
+      const duplicate = [...attachments, ...pendingFiles].some(
+        (item) => item.name === file.name && Number(item.size || 0) === file.size
+      );
+      if (!duplicate) accepted.push(file);
+    });
+
+    if (accepted.length) {
+      setPendingFiles((current) => [...current, ...accepted]);
+    }
+    if (errors.length) showError(errors.join(' | '));
+  };
+
+  const removePendingFile = (index) => {
+    setPendingFiles((current) => current.filter((_, itemIndex) => itemIndex !== index));
+  };
+
+  const removeExistingAttachment = (attachment) => {
+    setAttachments((current) => current.filter((item) => item.id !== attachment.id));
+    if (attachment.id) {
+      setRemovedAttachments((current) => [...current, attachment]);
+    }
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setSaving(true);
@@ -187,18 +268,70 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
     }
 
     try {
-      await saveProject({
+      // Save first so a newly created project receives an ID.
+      const firstSaved = await saveProject({
         ...form,
         BudgetSource: selectedSources.join(', '),
         UseActivities: useActivities,
         ApprovedBudget: approvedBudget,
         SpentBudget: String(useActivities ? activitySpentTotal : Number(form.SpentBudget || 0)),
         Status: normalizeStatus(form.Status),
+        AttachmentsJSON: JSON.stringify(attachments),
         activities: cleanedActivities
       });
+
+      const projectId = firstSaved?.ID || firstSaved?.id || form.ID;
+      if (!projectId) {
+        throw new Error('บันทึกโครงการแล้ว แต่ระบบไม่ส่งรหัสโครงการกลับมา จึงยังอัปโหลดไฟล์ไม่ได้');
+      }
+
+      const uploaded = [];
+      for (const file of pendingFiles) {
+        setMessageType('success');
+        setMessage(`กำลังอัปโหลด ${file.name}...`);
+        const base64 = await readFileAsBase64(file);
+        const result = await uploadProjectFile({
+          projectId,
+          projectName: form.ProjectName,
+          file: {
+            name: file.name,
+            mimeType: file.type || inferMimeType(file.name),
+            size: file.size,
+            base64
+          }
+        });
+        uploaded.push(result);
+      }
+
+      for (const attachment of removedAttachments) {
+        try {
+          await deleteProjectFile({ fileId: attachment.id, projectId });
+        } catch (error) {
+          console.warn('Unable to remove Drive file:', error);
+        }
+      }
+
+      const finalAttachments = [...attachments, ...uploaded];
+      if (pendingFiles.length || removedAttachments.length || form.ID !== projectId) {
+        await saveProject({
+          ...form,
+          ID: projectId,
+          BudgetSource: selectedSources.join(', '),
+          UseActivities: useActivities,
+          ApprovedBudget: approvedBudget,
+          SpentBudget: String(useActivities ? activitySpentTotal : Number(form.SpentBudget || 0)),
+          Status: normalizeStatus(form.Status),
+          AttachmentsJSON: JSON.stringify(finalAttachments),
+          activities: cleanedActivities
+        });
+      }
+
+      setAttachments(finalAttachments);
+      setPendingFiles([]);
+      setRemovedAttachments([]);
       setMessageType('success');
-      setMessage('บันทึกข้อมูลโครงการเรียบร้อยแล้ว');
-      setTimeout(onFormDone, 500);
+      setMessage('บันทึกโครงการและไฟล์แนบเรียบร้อยแล้ว');
+      setTimeout(onFormDone, 700);
     } catch (err) {
       showError(err.message || 'บันทึกข้อมูลไม่สำเร็จ');
     } finally {
@@ -279,6 +412,52 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
           </label>
         </div>
 
+        <section className="project-attachment-section">
+          <div className="section-head">
+            <div>
+              <h3>ไฟล์แนบโครงการ</h3>
+              <p>รองรับ JPG, PNG, WEBP, PDF, DOC และ DOCX ขนาดไม่เกิน 10 MB ต่อไฟล์</p>
+            </div>
+            <button type="button" className="ghost-btn attachment-upload-btn" onClick={() => fileInputRef.current?.click()}>
+              <Upload size={16} /> เลือกไฟล์
+            </button>
+            <input
+              ref={fileInputRef}
+              className="attachment-file-input"
+              type="file"
+              multiple
+              accept=".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx"
+              onChange={handleFilesSelected}
+            />
+          </div>
+
+          <div className="attachment-grid">
+            {attachments.map((attachment) => (
+              <AttachmentItem
+                key={attachment.id || attachment.url || attachment.name}
+                item={attachment}
+                existing
+                onRemove={() => removeExistingAttachment(attachment)}
+              />
+            ))}
+            {pendingFiles.map((file, index) => (
+              <AttachmentItem
+                key={`${file.name}-${file.size}-${index}`}
+                item={file}
+                pending
+                onRemove={() => removePendingFile(index)}
+              />
+            ))}
+            {!attachments.length && !pendingFiles.length && (
+              <button type="button" className="attachment-empty" onClick={() => fileInputRef.current?.click()}>
+                <Upload size={22} />
+                <strong>ยังไม่มีไฟล์แนบ</strong>
+                <span>คลิกเพื่อเลือกรูปภาพ PDF หรือ Word</span>
+              </button>
+            )}
+          </div>
+        </section>
+
         <section className="budget-source-section">
           <div className="section-head">
             <div>
@@ -299,14 +478,8 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
             ))}
           </div>
           <div className="source-add-row">
-            <input
-              value={sourceDraft}
-              placeholder="เพิ่มแหล่งงบประมาณ เช่น เงินบริจาค"
-              onChange={(event) => setSourceDraft(event.target.value)}
-            />
-            <button type="button" className="ghost-btn" onClick={addBudgetSource}>
-              <Plus size={16} /> เพิ่ม
-            </button>
+            <input value={sourceDraft} placeholder="เพิ่มแหล่งงบประมาณ เช่น เงินบริจาค" onChange={(event) => setSourceDraft(event.target.value)} />
+            <button type="button" className="ghost-btn" onClick={addBudgetSource}><Plus size={16} /> เพิ่ม</button>
           </div>
         </section>
 
@@ -324,7 +497,6 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
               </div>
               <button type="button" className="primary-btn" onClick={addActivity}><Plus size={16} /> เพิ่มกิจกรรม</button>
             </div>
-
             <div className="activity-form-list">
               {activities.map((activity, index) => (
                 <div className="activity-form-card" key={activity.ID || index}>
@@ -337,10 +509,7 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
                       <span>ชื่อกิจกรรม</span>
                       <input value={activity.ActivityName} onChange={(event) => updateActivity(index, 'ActivityName', event.target.value)} placeholder="ระบุชื่อกิจกรรม" />
                     </label>
-                    <label>
-                      <span>ผู้รับผิดชอบกิจกรรม</span>
-                      <input value={activity.OwnerName} onChange={(event) => updateActivity(index, 'OwnerName', event.target.value)} />
-                    </label>
+                    <label><span>ผู้รับผิดชอบกิจกรรม</span><input value={activity.OwnerName} onChange={(event) => updateActivity(index, 'OwnerName', event.target.value)} /></label>
                     <label>
                       <span>แหล่งงบประมาณ</span>
                       <select value={activity.BudgetSource} onChange={(event) => updateActivity(index, 'BudgetSource', event.target.value)}>
@@ -354,28 +523,14 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
                         {PROJECT_STATUSES.map((status) => <option value={status} key={status}>{status}</option>)}
                       </select>
                     </label>
-                    <label>
-                      <span>งบกิจกรรม</span>
-                      <input type="number" min="0" step="0.01" value={activity.ApprovedBudget} onChange={(event) => updateActivity(index, 'ApprovedBudget', event.target.value)} />
-                    </label>
-                    <label>
-                      <span>ใช้จริง</span>
-                      <input type="number" min="0" step="0.01" value={activity.SpentBudget} onChange={(event) => updateActivity(index, 'SpentBudget', event.target.value)} />
-                    </label>
-                    <label>
-                      <span>วันที่เริ่ม</span>
-                      <input type="date" value={activity.StartDate} onChange={(event) => updateActivity(index, 'StartDate', event.target.value)} />
-                    </label>
-                    <label>
-                      <span>วันที่สิ้นสุด</span>
-                      <input type="date" value={activity.EndDate} onChange={(event) => updateActivity(index, 'EndDate', event.target.value)} />
-                    </label>
+                    <label><span>งบกิจกรรม</span><input type="number" min="0" step="0.01" value={activity.ApprovedBudget} onChange={(event) => updateActivity(index, 'ApprovedBudget', event.target.value)} /></label>
+                    <label><span>ใช้จริง</span><input type="number" min="0" step="0.01" value={activity.SpentBudget} onChange={(event) => updateActivity(index, 'SpentBudget', event.target.value)} /></label>
+                    <label><span>วันที่เริ่ม</span><input type="date" value={activity.StartDate} onChange={(event) => updateActivity(index, 'StartDate', event.target.value)} /></label>
+                    <label><span>วันที่สิ้นสุด</span><input type="date" value={activity.EndDate} onChange={(event) => updateActivity(index, 'EndDate', event.target.value)} /></label>
                   </div>
                 </div>
               ))}
-              {activities.length === 0 && (
-                <div className="empty-state">ยังไม่มีกิจกรรม กด “เพิ่มกิจกรรม” เพื่อเริ่มแยกงบ</div>
-              )}
+              {activities.length === 0 && <div className="empty-state">ยังไม่มีกิจกรรม กด “เพิ่มกิจกรรม” เพื่อเริ่มแยกงบ</div>}
             </div>
           </section>
         )}
@@ -391,11 +546,87 @@ export function ProjectForm({ editingProject, projects, saveProject, onFormDone,
   );
 }
 
+function AttachmentItem({ item, existing = false, pending = false, onRemove }) {
+  const mimeType = item.mimeType || item.type || inferMimeType(item.name);
+  const isImage = mimeType.startsWith('image/');
+  const Icon = getFileIcon(mimeType);
+
+  return (
+    <div className={`attachment-item ${pending ? 'is-pending' : ''}`}>
+      <div className="attachment-preview">
+        {isImage && existing && (item.thumbnailUrl || item.url) ? (
+          <img src={item.thumbnailUrl || item.url} alt="" />
+        ) : (
+          <Icon size={24} />
+        )}
+      </div>
+      <div className="attachment-copy">
+        {existing && item.url ? (
+          <a href={item.url} target="_blank" rel="noreferrer">{item.name}</a>
+        ) : (
+          <strong>{item.name}</strong>
+        )}
+        <span>{formatFileSize(item.size)}{pending ? ' • รออัปโหลด' : ''}</span>
+      </div>
+      <button type="button" className="attachment-remove" onClick={onRemove} title="นำไฟล์ออก">
+        <X size={15} />
+      </button>
+    </div>
+  );
+}
+
+function getFileIcon(mimeType) {
+  if (mimeType.startsWith('image/')) return FileImage;
+  if (mimeType === 'application/pdf') return FileText;
+  return FileType2;
+}
+
+function isAcceptedFile(file) {
+  return ACCEPTED_FILE_TYPES.includes(file.type) || /\.(jpe?g|png|webp|pdf|docx?)$/i.test(file.name);
+}
+
+function inferMimeType(name = '') {
+  if (/\.pdf$/i.test(name)) return 'application/pdf';
+  if (/\.docx$/i.test(name)) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  if (/\.doc$/i.test(name)) return 'application/msword';
+  if (/\.png$/i.test(name)) return 'image/png';
+  if (/\.webp$/i.test(name)) return 'image/webp';
+  return 'image/jpeg';
+}
+
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error(`อ่านไฟล์ ${file.name} ไม่สำเร็จ`));
+    reader.onload = () => {
+      const result = String(reader.result || '');
+      resolve(result.includes(',') ? result.split(',')[1] : result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function parseAttachments(value) {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function formatFileSize(value) {
+  const size = Number(value || 0);
+  if (!size) return '';
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
+}
+
 function splitSources(value) {
-  return String(value || '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
+  return String(value || '').split(',').map((item) => item.trim()).filter(Boolean);
 }
 
 function toDateInput(value) {

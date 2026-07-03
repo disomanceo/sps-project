@@ -4,6 +4,7 @@ export function mapSheetProject(row) {
   const activities = Array.isArray(row.ActivitiesList) ? row.ActivitiesList.map(mapSheetActivity) : [];
   const activitySpent = activities.reduce((sum, item) => sum + item.spent, 0);
   const useActivities = row.UseActivities === true || row.UseActivities === 'TRUE' || activities.length > 0;
+  const attachments = parseAttachments(row.AttachmentsJSON || row.Attachments);
 
   return {
     id: row.ID || '',
@@ -15,9 +16,10 @@ export function mapSheetProject(row) {
     spent: useActivities ? activitySpent : Number(row.SpentBudget || 0),
     useActivities,
     activities,
+    attachments,
     progress: getProgress(row.Status),
     due: row.EndDate || '-',
-    raw: row
+    raw: { ...row, AttachmentsJSON: JSON.stringify(attachments) }
   };
 }
 
@@ -40,7 +42,6 @@ export function mapSheetActivity(row) {
 export function normalizeStatus(status) {
   const value = String(status || '').trim();
   if (!value) return 'ยังไม่เริ่ม';
-
   const statusMap = {
     draft: 'ยังไม่เริ่ม',
     pending: 'ยังไม่เริ่ม',
@@ -50,8 +51,18 @@ export function normalizeStatus(status) {
     not_started: 'ยังไม่เริ่ม',
     cancelled: 'ยกเลิก'
   };
-
   return statusMap[value] || value;
+}
+
+function parseAttachments(value) {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
 function getProgress(status) {
